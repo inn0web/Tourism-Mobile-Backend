@@ -204,3 +204,44 @@ class LoginUser(TokenObtainPairView):
         }
         
         return Response(response, status=status.HTTP_200_OK)
+    
+class MyTokenRefreshView(TokenRefreshView):
+    serializer_class = TokenRefreshSerializer
+
+    @swagger_auto_schema(
+        request_body=TokenRefreshSerializer,
+        responses={
+            200: openapi.Response(
+                description="Token refresh successful",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'access': openapi.Schema(type=openapi.TYPE_STRING, description='New access token'),
+                        'refresh': openapi.Schema(type=openapi.TYPE_STRING, description='Refresh token'),
+                    }
+                )
+            ),
+            400: openapi.Response(description="Bad Request"),
+            401: openapi.Response(
+                description="Unauthorized",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description="Token is blacklisted"),
+                        'code': openapi.Schema(type=openapi.TYPE_STRING, description="token_not_valid"),
+                    },
+                    example={
+                        "detail": "Token is blacklisted",
+                        "code": "token_not_valid"
+                    }
+                )
+            ),
+        },
+        operation_description=(
+            "Refresh an access token using a valid refresh token. The access token is valid for 3 days, "
+            "and the refresh token is valid for 2 weeks (14 days)."
+        ),
+        operation_summary="Refresh Token",
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs) 
