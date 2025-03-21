@@ -1,6 +1,7 @@
 import re
 from .models import User
 
+
 def is_valid_email(email):
 
     if 'do-not-respond' in email:

@@ -3,6 +3,8 @@ from django.db import models
 from datetime import timedelta
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.conf import settings
+from django.core.mail import EmailMessage
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -55,6 +57,19 @@ class User(AbstractBaseUser, PermissionsMixin):
             "access": str(refresh.access_token),
             "refresh": str(refresh)
         }
+    
+    def send_email(self, password_reset_code=None):
+
+        if password_reset_code is not None:
+            
+            email_message = EmailMessage(
+                "Your Password Reset Code",
+                f"Your password reset code is {password_reset_code}.",
+                settings.EMAIL_HOST_USER,
+                [self.email]
+            )
+            email_message.fail_silently = True
+            email_message.send()
 
     objects = CustomUserManager()
 

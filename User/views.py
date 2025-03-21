@@ -13,6 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from .utils import is_valid_email, authenticate_credentials
 from .serializers import UserSerializer
+from django.utils.crypto import get_random_string
 
 @swagger_auto_schema(
     method='post',
@@ -245,3 +246,367 @@ class MyTokenRefreshView(TokenRefreshView):
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs) 
+    
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'refresh': openapi.Schema(
+                type=openapi.TYPE_STRING, 
+                description='Refresh token of the current session that needs to be blacklisted.'
+            ),
+        },
+        required=['refresh'],
+        example={
+            'refresh': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...',
+        },
+    ),
+    responses={
+        204: openapi.Response(
+            description="Successfully logged out.",
+            examples={
+                'application/json': {
+                    'message': 'Successfully logged out.'
+                }
+            }
+        ),
+        400: openapi.Response(
+            description="Bad Request",
+            examples={
+                'application/json': {
+                    'error': 'Refresh token is required.'
+                }
+            }
+        ),
+    },
+    operation_description=(
+        "Logs out the current user by invalidating the provided refresh token. This action blacklists the refresh token, "
+        "ensuring that it cannot be used to obtain new access tokens in the future. The refresh token must be included "
+        "in the request body. If the token is missing or invalid, a 400 Bad Request error will be returned."
+    ),
+    operation_summary="Logout a user",
+)
+@api_view(['POST'])
+def Logout(request):
+    
+    try:
+        refresh_token = request.data.get("refresh")
+        if refresh_token is None:
+            return Response({"error": "Refresh token is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Blacklist the refresh token to prevent further use
+        token = RefreshToken(refresh_token)
+        token.blacklist()
+        
+        return Response({
+            "status": "success",
+            "message": "Successfully logged out."
+            }, status=status.HTTP_204_NO_CONTENT)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response(
+            description="User information retrieved successfully",
+            schema=UserSerializer
+        ),
+        401: openapi.Response(
+            description="Unauthorized",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'detail': openapi.Schema(type=openapi.TYPE_STRING, description="Error detail"),
+                },
+                example={
+                    "detail": "Authentication credentials were not provided."
+                }
+            )
+        ),
+    },
+    operation_description="Retrieve the current authenticated user's information.",
+    operation_summary="Get User Info",
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def GetUserInfo(request):
+    user = request.user
+    serializer = UserSerializer(user)
+    return Response(serializer.data)
+
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='User email address'),
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="Reset code sent successfully",
+            examples={
+                "application/json": {
+                    "status": "success",
+                    "message": "Reset code sent successfully",
+                }
+            }
+        ),
+        404: openapi.Response(
+            description="Bad Request",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "No user with this email found",
+                }
+            }
+        ),
+        400: openapi.Response(
+            description="Bad Request",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "Email provided is invalid",
+                }
+            }
+        )
+    },
+    operation_description="Request a password reset code by entering your email address.",
+    operation_summary="Request Password Reset Code",
+)
+@api_view(['POST'])
+def RequestResetCode(request):
+    email = request.data.get('email')
+
+    if not email:
+        return Response({
+            "status": "error",
+            "message": "Email address is required"
+            }, status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if not is_valid_email(email):
+        return Response({
+            "status": "error",
+            "message": "Email provided is invalid"
+            }, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        user = User.objects.get(email=email)
+
+        # delete old codes
+        PasswordResetCode.objects.filter(user=user).delete()
+
+        code = get_random_string(length=6, allowed_chars='0123456789')
+        PasswordResetCode.objects.create(user=user, code=code)
+
+        # Send email (this is a simple example; configure your email backend as needed)
+        user.send_email(password_reset_code=code)
+
+        return Response({
+            "status": "success",
+            "message": "Reset code sent successfully"
+        }, status=status.HTTP_200_OK)
+
+    except User.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "No user with this email found"
+        }, status=status.HTTP_404_NOT_FOUND)
+        
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='User email'),
+            'code': openapi.Schema(type=openapi.TYPE_STRING, description='Reset code sent to email'),
+        },
+        required=['email', 'code']
+    ),
+    responses={
+        200: openapi.Response(
+            description="Password updated successfully",
+            examples={
+                "application/json": {
+                    "status": "success",
+                    "message": "Reset code is valid",
+                }
+            }
+        ),
+        403: openapi.Response(
+            description="Expired Reset Code",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "Reset code has expired",
+                },
+            }
+        ),
+        404: openapi.Response(
+            description="Bad Request",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "User with this email does not exist",
+                }
+            }
+        ),
+        400: openapi.Response(
+            description="Bad Request",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "Invalid reset code",
+                }
+            }
+        )
+    },
+    operation_description="Verify the reset code sent to the user's email.",
+    operation_summary="Verify Reset Code"
+)
+@api_view(['POST'])
+def VerifyResetCode(request):
+
+    email = request.data.get('email')
+    code = request.data.get('code')
+
+    try:
+        user = User.objects.get(email=email)
+        reset_code = PasswordResetCode.objects.get(user=user, code=code)
+
+        if reset_code.is_valid():
+            return Response({
+                "status": "success",
+                "message": "Reset code is valid."
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                "status": "error",
+                "message": "Reset code has expired."
+            }, status=status.HTTP_403_FORBIDDEN)
+
+    except User.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "User with this email does not exist."
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    except PasswordResetCode.DoesNotExist:
+        return Response({
+            "status" "error,"
+            "message": "Invalid reset code."
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['code', 'password', 'confirm_password'],
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='User email'),
+            'code': openapi.Schema(type=openapi.TYPE_STRING, description='The reset code sent to the user email.'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, description='The new password.'),
+            'confirm_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new password again for confirmation.'),
+        },
+    ),
+    responses={
+        200: openapi.Response(
+            description="Reset code is valid",
+            examples={
+                "application/json": {
+                    "status": "success",
+                    "message": "Password updated successfully",
+                }
+            }
+        ),
+        403: openapi.Response(
+            description="Expired Reset Code",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "Reset code has expired",
+                },
+            }
+        ),
+        404: openapi.Response(
+            description="Bad Request",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "No user with that email address exists",
+                }
+            }
+        ),
+        400: openapi.Response(
+            description="Bad Request",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "Passwords do not match",
+                }
+            }
+        )
+    },
+    operation_description="Reset the user's password using the reset code.",
+    operation_summary="Reset Password",
+)
+@api_view(['POST'])
+def ResetPassword(request):
+
+    email = request.data.get('email')
+    code = request.data.get('code')
+    password = request.data.get('password')
+    confirm_password = request.data.get('confirm_password')
+
+    try:
+        user = User.objects.get(email=email)
+        reset_code = PasswordResetCode.objects.get(code=code, user=user)
+
+        # validate the passwords and reset code
+
+        if not reset_code.is_valid():
+            return Response({
+                "status": "error",
+                "message": "Reset code has expired."
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        if password != confirm_password:
+            return Response({
+                "status": "error",
+                "message": "Passwords do not match"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(password) < 5:
+            return Response({
+                "status": "error",
+                "message": "Password must be at least 5 characters long"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # update the password
+
+        user.set_password(password)
+        user.save()
+
+        reset_code.delete()
+
+        return Response({
+            "status": "success",
+            "message": "Password updated successfully"
+        }, status=status.HTTP_200_OK)
+
+
+    except User.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "No user with that email address exists"
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    except PasswordResetCode.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "Reset code provided does not exist"
+        }, status=status.HTTP_404_NOT_FOUND)
