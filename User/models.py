@@ -41,7 +41,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     phone = models.CharField(max_length=15, default='', null=True, blank=True, help_text="The user's phone number.")
     profile_image = models.FileField(null=True, blank=True, help_text="User's profile image")
-    interests = models.ManyToManyField(Category, null=True, blank=True, help_text="The user's interests")
+    interests = models.ManyToManyField(Category, blank=True, help_text="The user's interests")
 
     is_staff =  models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False, help_text="Indicates whether the user has all admin permissions. Defaults to False.")

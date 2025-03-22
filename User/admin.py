@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import User, PasswordResetCode, Category
+from import_export.admin import ImportExportModelAdmin
 
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(ImportExportModelAdmin, admin.ModelAdmin):
 
     list_display = ['email', 'first_name', 'last_name', 'phone', 'date_joined']
     list_filter = ['is_active', 'is_staff', 'is_superuser', 'date_joined']
@@ -9,7 +10,7 @@ class UserAdmin(admin.ModelAdmin):
 
 admin.site.register(User, UserAdmin)
 
-class PasswordResetCodeAdmin(admin.ModelAdmin):
+class PasswordResetCodeAdmin(ImportExportModelAdmin, admin.ModelAdmin):
 
     list_display = ['user', 'code', 'created_at']
     list_filter = ['created_at']
@@ -17,7 +18,7 @@ class PasswordResetCodeAdmin(admin.ModelAdmin):
 
 admin.site.register(PasswordResetCode, PasswordResetCodeAdmin)
 
-class CategoryAdmin(admin.ModelAdmin):
+class CategoryAdmin(ImportExportModelAdmin, admin.ModelAdmin):
 
     list_display = ['name', 'id']
     search_fields = ['name', 'id']
