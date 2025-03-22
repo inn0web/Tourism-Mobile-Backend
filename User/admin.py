@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, PasswordResetCode
+from .models import User, PasswordResetCode, Category
 
 class UserAdmin(admin.ModelAdmin):
 
@@ -16,3 +16,10 @@ class PasswordResetCodeAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'user__first_name', 'user__last_name', 'code']
 
 admin.site.register(PasswordResetCode, PasswordResetCodeAdmin)
+
+class CategoryAdmin(admin.ModelAdmin):
+
+    list_display = ['name', 'id']
+    search_fields = ['name', 'id']
+
+admin.site.register(Category, CategoryAdmin)

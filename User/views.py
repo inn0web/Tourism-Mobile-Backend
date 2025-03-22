@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import User, PasswordResetCode
+from .models import User, PasswordResetCode, Category
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -12,7 +12,7 @@ from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from .utils import is_valid_email, authenticate_credentials
-from .serializers import UserSerializer
+from .serializers import UserSerializer, CategorySerializer
 from django.utils.crypto import get_random_string
 
 @swagger_auto_schema(
@@ -41,6 +41,7 @@ from django.utils.crypto import get_random_string
                         "first_name": "John",
                         "last_name": "Doe",
                         "phone": "1234567890",
+                        "interests": [],
                         "is_active": True,
                         "date_joined": "2024-10-10T12:34:56Z",
                         "profile_image": "https://example.com/profile.jpg",
@@ -153,6 +154,16 @@ class LoginUser(TokenObtainPairView):
                                 'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='First Name'),
                                 'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Last Name'),
                                 'phone': openapi.Schema(type=openapi.TYPE_STRING, description='Phone Number'),
+                                'interests': openapi.Schema(
+                                    type=openapi.TYPE_ARRAY,
+                                    description="User's interests as a list of categories",
+                                    items=openapi.Schema(
+                                        type=openapi.TYPE_OBJECT,
+                                        properties={
+                                            'name': openapi.Schema(type=openapi.TYPE_STRING, description='Interest Name'),
+                                        }
+                                    )
+                                ),
                                 'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Is Active'),
                                 'date_joined': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='Date Joined'),
                                 'profile_image': openapi.Schema(type=openapi.TYPE_STRING, description='Profile Image Link'),
@@ -670,13 +681,13 @@ def ResetPassword(request):
 @permission_classes([IsAuthenticated])
 def UpdateUser(request):
 
-    email = request.POST.get('email')
-    # first_name = request.POST.get('first_name')
-    # last_name = request.POST.get('last_name')
-    phone = request.POST.get('phone')
-    password = request.POST.get('password')
-    current_password = request.POST.get('current_password')
-    confirm_password = request.POST.get('confirm_password')
+    email = request.data.get('email')
+    # first_name = request.data.get('first_name')
+    # last_name = request.data.get('last_name')
+    phone = request.data.get('phone')
+    password = request.data.get('password')
+    current_password = request.data.get('current_password')
+    confirm_password = request.data.get('confirm_password')
     profile_image = request.FILES.get('profile_image')
 
     user = request.user
@@ -745,3 +756,133 @@ def UpdateUser(request):
             "status": "success",
             "message": "Profile image updated successfully"
         }, status=status.HTTP_200_OK)
+    
+@swagger_auto_schema(
+    method='get',
+    operation_description="Retrieve a list of interests/categories that can be explored.",
+    responses={
+        200: openapi.Response(
+            description="List of bookings",
+            schema=CategorySerializer(many=True)
+        ),
+    },
+    operation_summary="List Interests",
+    tags=["User"]
+)
+@api_view(['GET'])
+def AllInterests(request):
+
+    categories = Category.objects.all()
+    serializer = CategorySerializer(categories, many=True)
+
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@swagger_auto_schema(
+    method='patch',
+    operation_summary="Update user interests",
+    operation_description="""
+    Allows an authenticated user to update their interests by providing a list of category names. 
+    The endpoint will replace the user's current interests with the provided ones.
+    
+    - **Only authenticated users can access this endpoint.**
+    - **Categories should be provided as a list of strings.**
+    - **If a category does not exist, it will be ignored.**
+    """,
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'interests': openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                description="A list of interest names that the user wants to set as their preferences.",
+                items=openapi.Schema(type=openapi.TYPE_STRING)
+            ),
+        },
+        required=['interests']
+    ),
+    responses={
+        200: openapi.Response(
+            description="User interests updated successfully.",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "status": openapi.Schema(type=openapi.TYPE_STRING, example="success"),
+                    "message": openapi.Schema(type=openapi.TYPE_STRING, example="User interests updated successfully."),
+                    "user": openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            "email": openapi.Schema(type=openapi.TYPE_STRING, example="user@example.com"),
+                            "first_name": openapi.Schema(type=openapi.TYPE_STRING, example="John"),
+                            "last_name": openapi.Schema(type=openapi.TYPE_STRING, example="Doe"),
+                            "phone": openapi.Schema(type=openapi.TYPE_STRING, example="123456789"),
+                            "is_active": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=True),
+                            "date_joined": openapi.Schema(type=openapi.TYPE_STRING, format="date-time", example="2024-03-20T10:00:00Z"),
+                            "profile_image": openapi.Schema(type=openapi.TYPE_STRING, example="https://yourcdn.com/user_images/123.jpg"),
+                            "interests": openapi.Schema(
+                                type=openapi.TYPE_ARRAY,
+                                description="List of user's updated interests.",
+                                items=openapi.Schema(
+                                    type=openapi.TYPE_OBJECT,
+                                    properties={
+                                        "name": openapi.Schema(type=openapi.TYPE_STRING, example="Hiking")
+                                    }
+                                )
+                            ),
+                        }
+                    )
+                }
+            )
+        ),
+        400: openapi.Response(
+            description="Invalid request data.",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "status": openapi.Schema(type=openapi.TYPE_STRING, example="error"),
+                    "message": openapi.Schema(type=openapi.TYPE_STRING, example="Invalid format. 'interests' should be a list of category names.")
+                }
+            )
+        ),
+        401: openapi.Response(
+            description="Authentication required.",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "status": openapi.Schema(type=openapi.TYPE_STRING, example="error"),
+                    "message": openapi.Schema(type=openapi.TYPE_STRING, example="Authentication required.")
+                }
+            )
+        ),
+    },
+    tags=["User"]
+)
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def UpdateUserInterests(request):
+   
+    user = request.user
+    interest_names = request.data.get('interests', [])
+
+    if not isinstance(interest_names, list) or not all(isinstance(i, str) for i in interest_names):
+        return Response({
+            "status": "error",
+            "message": "Invalid format. 'interests' should be a list of category names."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Fetch matching categories
+    categories = Category.objects.filter(name__in=interest_names)
+
+    if not categories.exists():
+        return Response({
+            "status": "error",
+            "message": "No matching interests found."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Update user's interests
+    user.interests.set(categories)
+
+    return Response({
+        "status": "success",
+        "message": "User interests updated successfully",
+        "user": UserSerializer(user).data
+    }, status=status.HTTP_200_OK)
+

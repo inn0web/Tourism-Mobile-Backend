@@ -4,7 +4,8 @@ from .views import (
     MyTokenRefreshView, Logout,
     GetUserInfo, RequestResetCode,
     VerifyResetCode, ResetPassword,
-    UpdateUser
+    UpdateUser, AllInterests,
+    UpdateUserInterests
 )
 urlpatterns = [
     path('register/', RegisterUser),
@@ -18,5 +19,8 @@ urlpatterns = [
     path('password-reset/verify-reset-code/', VerifyResetCode),
     path('password-reset/reset-password-with-code/', ResetPassword),
 
-    path('update-user-info/', UpdateUser)
+    path('update-user-info/', UpdateUser),
+
+    path('all-interests/', AllInterests),
+    path('update-user-interests/', UpdateUserInterests),
 ]
