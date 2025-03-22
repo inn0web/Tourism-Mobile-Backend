@@ -62,6 +62,7 @@ from django.utils.crypto import get_random_string
         )
     },
     operation_summary="Register a new user",
+    tags=["User"]
 )
 @api_view(['POST'])
 def RegisterUser(request):
@@ -168,6 +169,7 @@ class LoginUser(TokenObtainPairView):
             "to successfully log in. Use the Bearer token in the `Authorization` header for accessing endpoints that require authentication."
         ),
         operation_summary="Login - Obtain JWT Token Pair",
+        tags=["User"],
         security=[]
     )
     def post(self, request, *args, **kwargs):
@@ -243,6 +245,7 @@ class MyTokenRefreshView(TokenRefreshView):
             "and the refresh token is valid for 2 weeks (14 days)."
         ),
         operation_summary="Refresh Token",
+        tags=["User"]
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs) 
@@ -286,6 +289,7 @@ class MyTokenRefreshView(TokenRefreshView):
         "in the request body. If the token is missing or invalid, a 400 Bad Request error will be returned."
     ),
     operation_summary="Logout a user",
+    tags=["User"]
 )
 @api_view(['POST'])
 def Logout(request):
@@ -328,6 +332,7 @@ def Logout(request):
     },
     operation_description="Retrieve the current authenticated user's information.",
     operation_summary="Get User Info",
+    tags=["User"]
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -375,6 +380,7 @@ def GetUserInfo(request):
     },
     operation_description="Request a password reset code by entering your email address.",
     operation_summary="Request Password Reset Code",
+    tags=["User"]
 )
 @api_view(['POST'])
 def RequestResetCode(request):
@@ -466,7 +472,8 @@ def RequestResetCode(request):
         )
     },
     operation_description="Verify the reset code sent to the user's email.",
-    operation_summary="Verify Reset Code"
+    operation_summary="Verify Reset Code",
+    tags=["User"]
 )
 @api_view(['POST'])
 def VerifyResetCode(request):
@@ -553,6 +560,7 @@ def VerifyResetCode(request):
     },
     operation_description="Reset the user's password using the reset code.",
     operation_summary="Reset Password",
+    tags=["User"]
 )
 @api_view(['POST'])
 def ResetPassword(request):
@@ -610,3 +618,130 @@ def ResetPassword(request):
             "status": "error",
             "message": "Reset code provided does not exist"
         }, status=status.HTTP_404_NOT_FOUND)
+
+@swagger_auto_schema(
+    method='patch',
+    operation_description="Update user details such as email, phone, password, or profile image.",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description="New email address"),
+            'phone': openapi.Schema(type=openapi.TYPE_STRING, description="New phone number"),
+            'current_password': openapi.Schema(type=openapi.TYPE_STRING, description="Current password for verification"),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, description="New password"),
+            'confirm_password': openapi.Schema(type=openapi.TYPE_STRING, description="Confirm new password"),
+            'profile_image': openapi.Schema(type=openapi.TYPE_FILE, description="New profile image"),
+        },
+        required=[]
+    ),
+    responses={
+        200: openapi.Response(
+            description="Success",
+            examples={
+                "application/json": {
+                    "status": "success",
+                    "message": "Email updated successfully"
+                }
+            }
+        ),
+        400: openapi.Response(
+            description="Bad Request",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "Passwords do not match"
+                }
+            }
+        ),
+        403: openapi.Response(
+            description="Forbidden",
+            examples={
+                "application/json": {
+                    "status": "error",
+                    "message": "Invalid password provided"
+                }
+            }
+        ),
+    },
+    operation_summary="Update user details",
+    tags=["User"]
+)    
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def UpdateUser(request):
+
+    email = request.POST.get('email')
+    # first_name = request.POST.get('first_name')
+    # last_name = request.POST.get('last_name')
+    phone = request.POST.get('phone')
+    password = request.POST.get('password')
+    current_password = request.POST.get('current_password')
+    confirm_password = request.POST.get('confirm_password')
+    profile_image = request.FILES.get('profile_image')
+
+    user = request.user
+
+    if email and email != user.email:
+
+        if not is_valid_email(email):
+            return Response({
+                "status": "error",
+                "message": "Invalid email address provided"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user.email = email
+        user.save()
+
+        return Response({
+            "status": "success",
+            "message": "Email updated successfully"
+        }, status=status.HTTP_200_OK)
+    
+    if phone and phone != user.phone:
+
+        user.phone = phone
+        user.save()
+
+        return Response({
+            "status": "success",
+            "message": "Phone updated successfully"
+        }, status=status.HTTP_200_OK)
+    
+    if password and confirm_password and current_password:
+
+        if not user.check_password(current_password):
+            return Response({
+                "status": "error",
+                "message": "Invalid password provided"
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        if password != confirm_password:
+        
+            return Response({
+                "status": "error",
+                "message": "Passwords do not match"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(password) < 5:
+
+            return Response({
+                "status": "error",
+                "message": "Password must be at least 5 characters long"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.set_password(password)
+        user.save()
+
+        return Response({
+            "status": "success",
+            "message": "Password updated successfully"
+        }, status=status.HTTP_200_OK)
+    
+    if profile_image:
+        user.profile_image = profile_image
+        user.save()
+
+        return Response({
+            "status": "success",
+            "message": "Profile image updated successfully"
+        }, status=status.HTTP_200_OK)
