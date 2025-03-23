@@ -6,7 +6,7 @@ from drf_yasg import openapi
 
 schema_view = get_schema_view(
    openapi.Info(
-      title="Albanian Tourism App API",
+      title="Eurotrip API",
       default_version='v1',
       description="Below, you will find all endpoints and documentation to each of these endpoints",
     #   terms_of_service="https://www.google.com/policies/terms/",
@@ -21,6 +21,7 @@ urlpatterns = [
    path('admin/', admin.site.urls),
    path('user/', include('User.urls')),
    path('places/', include('Places.urls')),
+   path('blog/', include('Blog.urls')),
 
    path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

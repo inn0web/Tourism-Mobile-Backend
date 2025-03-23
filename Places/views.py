@@ -5,6 +5,12 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .models import City
 from .serializers import CitySerializer
+from googlemaps import Client
+from django.conf import settings
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
+
+gmaps = Client(key=settings.GOOGLE_API_KEY)
 
 @swagger_auto_schema(
     method='get',
@@ -34,3 +40,9 @@ def GetCities(request):
     cities = City.objects.all()
     serializer = CitySerializer(cities, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def GetUserFeed(request):
+
+    ...

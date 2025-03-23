@@ -1,8 +1,9 @@
 from django.urls import path
 from .views import (
-    GetCities,
+    GetCities, GetUserFeed
 )
 
 urlpatterns = [
     path('cities/', GetCities),
+    # path('feed/', GetUserFeed),
 ]

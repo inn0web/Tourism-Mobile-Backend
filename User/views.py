@@ -877,6 +877,9 @@ def UpdateUserInterests(request):
             "message": "No matching interests found."
         }, status=status.HTTP_400_BAD_REQUEST)
 
+    # delete old categories
+    user.interests.clear()
+
     # Update user's interests
     user.interests.set(categories)
 
