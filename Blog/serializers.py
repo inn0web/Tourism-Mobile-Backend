@@ -18,7 +18,7 @@ class BlogListSerializer(serializers.ModelSerializer):
     
 class BlogDetailSerializer(serializers.ModelSerializer):
     thumbnail = serializers.SerializerMethodField()
-    images = serializers.ListField()
+    images = serializers.SerializerMethodField()
     city = serializers.SerializerMethodField() 
 
     class Meta:

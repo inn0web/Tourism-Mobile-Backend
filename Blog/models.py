@@ -11,6 +11,9 @@ class Blog(models.Model):
     is_published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def get_images(self):
+
+        return [blog_image.image.url for blog_image in BlogImage.objects.filter(blog=self)]
 
 class BlogImage(models.Model):
 
