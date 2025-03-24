@@ -1,26 +1,26 @@
 from django.urls import path
 from .views import (
-    RegisterUser, LoginUser,
-    MyTokenRefreshView, Logout,
-    GetUserInfo, RequestResetCode,
-    VerifyResetCode, ResetPassword,
-    UpdateUser, AllInterests,
-    UpdateUserInterests
+    register_user, LoginUser,
+    MyTokenRefreshView, logout_user,
+    get_user_info, request_reset_code,
+    verify_reset_code, reset_password,
+    update_user_account, all_interests,
+    update_user_interests
 )
 urlpatterns = [
-    path('register/', RegisterUser),
+    path('register/', register_user),
     path('token/', LoginUser.as_view()),
     path('token/refresh/', MyTokenRefreshView.as_view()),
-    path('logout/', Logout),
+    path('logout/', logout_user),
 
-    path('get-user-info/', GetUserInfo),
+    path('get-user-info/', get_user_info),
 
-    path('password-reset/request-reset-code/', RequestResetCode),
-    path('password-reset/verify-reset-code/', VerifyResetCode),
-    path('password-reset/reset-password-with-code/', ResetPassword),
+    path('password-reset/request-reset-code/', request_reset_code),
+    path('password-reset/verify-reset-code/', verify_reset_code),
+    path('password-reset/reset-password-with-code/', reset_password),
 
-    path('update-user-info/', UpdateUser),
+    path('update-user-info/', update_user_account),
 
-    path('all-interests/', AllInterests),
-    path('update-user-interests/', UpdateUserInterests),
+    path('all-interests/', all_interests),
+    path('update-user-interests/', update_user_interests),
 ]

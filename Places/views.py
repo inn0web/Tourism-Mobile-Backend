@@ -36,13 +36,13 @@ gmaps = Client(key=settings.GOOGLE_API_KEY)
     tags=['Places']
 )
 @api_view(['GET'])
-def GetCities(request):
+def all_cities(request):
     cities = City.objects.all()
     serializer = CitySerializer(cities, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def GetUserFeed(request):
+def get_user_feed(request):
 
     ...

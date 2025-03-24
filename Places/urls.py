@@ -1,9 +1,9 @@
 from django.urls import path
 from .views import (
-    GetCities, GetUserFeed
+    all_cities, get_user_feed
 )
 
 urlpatterns = [
-    path('cities/', GetCities),
-    # path('feed/', GetUserFeed),
+    path('cities/', all_cities),
+    # path('feed/', get_user_feed),
 ]

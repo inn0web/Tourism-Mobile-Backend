@@ -66,7 +66,7 @@ from django.utils.crypto import get_random_string
     tags=["User"]
 )
 @api_view(['POST'])
-def RegisterUser(request):
+def register_user(request):
 
     # grab incoming data
 
@@ -303,7 +303,7 @@ class MyTokenRefreshView(TokenRefreshView):
     tags=["User"]
 )
 @api_view(['POST'])
-def Logout(request):
+def logout_user(request):
     
     try:
         refresh_token = request.data.get("refresh")
@@ -347,7 +347,7 @@ def Logout(request):
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def GetUserInfo(request):
+def get_user_info(request):
     user = request.user
     serializer = UserSerializer(user)
     return Response(serializer.data)
@@ -394,7 +394,7 @@ def GetUserInfo(request):
     tags=["User"]
 )
 @api_view(['POST'])
-def RequestResetCode(request):
+def request_reset_code(request):
     email = request.data.get('email')
 
     if not email:
@@ -487,7 +487,7 @@ def RequestResetCode(request):
     tags=["User"]
 )
 @api_view(['POST'])
-def VerifyResetCode(request):
+def verify_reset_code(request):
 
     email = request.data.get('email')
     code = request.data.get('code')
@@ -574,7 +574,7 @@ def VerifyResetCode(request):
     tags=["User"]
 )
 @api_view(['POST'])
-def ResetPassword(request):
+def reset_password(request):
 
     email = request.data.get('email')
     code = request.data.get('code')
@@ -679,7 +679,7 @@ def ResetPassword(request):
 )    
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
-def UpdateUser(request):
+def update_user_account(request):
 
     email = request.data.get('email')
     # first_name = request.data.get('first_name')
@@ -770,7 +770,7 @@ def UpdateUser(request):
     tags=["User"]
 )
 @api_view(['GET'])
-def AllInterests(request):
+def all_interests(request):
 
     categories = Category.objects.all()
     serializer = CategorySerializer(categories, many=True)
@@ -857,7 +857,7 @@ def AllInterests(request):
 )
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
-def UpdateUserInterests(request):
+def update_user_interests(request):
    
     user = request.user
     interest_names = request.data.get('interests', [])
