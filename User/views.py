@@ -420,7 +420,7 @@ def request_reset_code(request):
         code = get_random_string(length=6, allowed_chars='0123456789')
         PasswordResetCode.objects.create(user=user, code=code)
 
-        # Send email (this is a simple example; configure your email backend as needed)
+        # send password reset code to user's email
         user.send_email(password_reset_code=code)
 
         return Response({

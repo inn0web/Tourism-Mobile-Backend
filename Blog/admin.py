@@ -4,7 +4,7 @@ from import_export.admin import ImportExportModelAdmin
 
 class BlogAdmin(ImportExportModelAdmin, admin.ModelAdmin):
 
-    list_display = ['title', 'city', 'is_published', 'created_at']
+    list_display = ['title', 'city', 'read_time', 'is_published', 'created_at']
 
 admin.site.register(Blog, BlogAdmin)
 
