@@ -515,7 +515,7 @@ def verify_reset_code(request):
     
     except PasswordResetCode.DoesNotExist:
         return Response({
-            "status" "error,"
+            "status": "error",
             "message": "Invalid reset code."
         }, status=status.HTTP_400_BAD_REQUEST)
     

@@ -14,7 +14,7 @@ from pathlib import Path
 from decouple import config
 from datetime import timedelta
 import dj_database_url
-from corsheaders.defaults import default_methods
+from corsheaders.defaults import default_methods, default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,17 +35,10 @@ CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS').split(',')
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS').split(',')
 CORS_ALLOW_METHODS = list(default_methods)
-
-CORS_ALLOW_HEADERS = [
-    "accept",
+CORS_ALLOW_HEADERS = list(default_headers) + [
     "accept-encoding",
-    "authorization",
-    "content-type",
     "dnt",
     "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
     "cache-control",
     "pragma",
     "x-api-key",
