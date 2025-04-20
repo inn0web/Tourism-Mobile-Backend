@@ -5,5 +5,5 @@ from .views import (
 
 urlpatterns = [
     path('cities/', all_cities),
-    # path('feed/', get_user_feed),
+    path('feed/<int:city_id>/', get_user_feed),
 ]
