@@ -6,12 +6,12 @@ class Feed:
     def __init__(self):
         self.api_key = settings.GOOGLE_API_KEY
         self.client = Client(key=self.api_key)
-        self.feed_response = {}
 
         #photo:
         # https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=YOUR_PHOTO_REFERENCE&key=YOUR_API_KEY
 
     def get_places_from_google_maps(self, city_name, city_location: tuple, user_interests: list) -> dict:
+        
         # Dictionary to store results
         user_feed = {
             "recommended": [],
@@ -19,7 +19,7 @@ class Feed:
         }
 
         for interest in user_interests:
-            
+
             places = self.client.places_nearby(
                 location=city_location,
                 radius=5000,  # Search within 5km radius
