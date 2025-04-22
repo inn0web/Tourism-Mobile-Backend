@@ -1,9 +1,11 @@
 from django.urls import path
 from .views import (
-    all_cities, get_user_feed
+    all_cities, get_user_feed,
+    get_place_details,
 )
 
 urlpatterns = [
     path('cities/', all_cities),
     path('feed/<int:city_id>/', get_user_feed),
+    path('place/<str:place_id>/', get_place_details),
 ]
