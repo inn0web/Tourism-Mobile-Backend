@@ -10,6 +10,7 @@ from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from .utils import Feed
+from User.models import Category
 
 gmaps = Client(key=settings.GOOGLE_API_KEY)
 
@@ -245,3 +246,139 @@ def get_place_details(request, place_id):
 
     place_detail = Feed().get_place_details(place_id=place_id)
     return Response(place_detail, status=status.HTTP_200_OK)
+
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Search for recommended and popular places in a city",
+    operation_description="""
+    Search for places within a given city based on a user's search query and/or selected interests.  
+    The results are fetched from the Google Places API and returned in two categories: `recommended` and `popular`.
+
+    - A place is considered **popular** if it has a rating of 4.5 or higher.
+    - Other places with lower or no ratings are listed under **recommended**.
+
+    ### Notes:
+    - At least one of `search_query` or `interests` must be provided in the request body.
+    - The `interests` should be a list of strings matching valid categories in the system.
+    - This endpoint uses a `POST` request for flexibility, even though no new data is created.
+    - Some fields in the response, like `phone`, `photos`, or `opening_hours`, may be missing depending on whether the place is a registered business or has provided that information to Google.
+
+    ### Example use cases:
+    - Search for "parks" or "museums" in a city.
+    - Filter results based on user-selected interests like ["restaurants", "art galleries"].
+    """,
+    tags=['Places'],
+    manual_parameters=[
+        openapi.Parameter(
+            name='city_id',
+            in_=openapi.IN_PATH,
+            type=openapi.TYPE_INTEGER,
+            required=True,
+            description="The ID of the city to search in."
+        )
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=[],
+        properties={
+            'search_query': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="Text-based search term (e.g. 'restaurants', 'parks')."
+            ),
+            'interests': openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Items(type=openapi.TYPE_STRING),
+                description="List of user interests (must match existing categories)."
+            )
+        },
+        description="You must provide at least one of `search_query` or `interests`."
+    ),
+    responses={
+        200: openapi.Response(
+            description="Successfully fetched popular and recommended places.",
+            examples={
+                "application/json": {
+                    "recommended": [
+                        {
+                            "name": "Tirana Castle",
+                            "place_id": "abcd1234",
+                            "tag": "castle",
+                            "city_name": "Tirana",
+                            "image": "https://maps.googleapis.com/maps/api/place/photo?...",
+                            "rating": 4.2
+                        }
+                    ],
+                    "popular": [
+                        {
+                            "name": "Sky Tower",
+                            "place_id": "wxyz5678",
+                            "tag": "restaurant",
+                            "city_name": "Tirana",
+                            "image": "https://maps.googleapis.com/maps/api/place/photo?...",
+                            "rating": 4.7
+                        }
+                    ]
+                }
+            }
+        ),
+        400: openapi.Response(description="Invalid format or no matching interests."),
+        404: openapi.Response(description="City not found.")
+    }
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def search_for_places(request, city_id):
+
+    try:
+        city = City.objects.get(id=city_id)
+    except City.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "City not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    search_query = request.data.get('search_query', None)
+    selected_interests = request.data.get('interests', [])
+
+    if not (search_query or selected_interests):
+        return Response({
+            "status": "error",
+            "message": "Please provide either a search query or interests."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    user_interests = []
+
+    # add user search query to interests
+    if search_query:
+        user_interests.append(search_query)
+
+    if selected_interests:
+        if not isinstance(selected_interests, list) or not all(isinstance(i, str) for i in selected_interests):
+            return Response({
+                "status": "error",
+                "message": "Invalid format. 'interests' should be a list of category names."
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Fetch matching categories
+        categories = Category.objects.filter(name__in=selected_interests)
+
+        # make sure categories exist
+        if not categories.exists():
+            return Response({
+                "status": "error",
+                "message": "No matching interests found."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # add selected interests to user_interests
+        user_interests.extend(categories.values_list('name', flat=True))
+
+    search_result_based_on_query_and_selected_interests = Feed().get_places_from_google_maps(
+        city_name=city.name,
+        city_location=(city.latitude, city.longitude),
+        user_interests=user_interests
+    )
+
+    return Response(
+        search_result_based_on_query_and_selected_interests, 
+        status=status.HTTP_200_OK
+    )
