@@ -97,3 +97,9 @@ class PasswordResetCode(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.code}"
+    
+class UserSavedPlace(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_places')
+    city_name = models.CharField(max_length=255)
+    place_id = models.CharField(max_length=255)
+    date = models.DateTimeField(auto_now_add=True, null=True, blank=True)

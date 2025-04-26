@@ -5,7 +5,8 @@ from .views import (
     get_user_info, request_reset_code,
     verify_reset_code, reset_password,
     update_user_account, all_interests,
-    update_user_interests
+    update_user_interests, save_place,
+    delete_saved_place, get_user_saved_places
 )
 urlpatterns = [
     path('register/', register_user),
@@ -23,4 +24,8 @@ urlpatterns = [
 
     path('all-interests/', all_interests),
     path('update-user-interests/', update_user_interests),
+
+    path('saved-places/<int:city_id>/', get_user_saved_places),
+    path('save-place/<int:city_id>/', save_place),
+    path('delete-saved-place/<int:city_id>/', delete_saved_place),
 ]

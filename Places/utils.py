@@ -57,7 +57,7 @@ class Feed:
 
         return user_feed
 
-    def get_place_details(self, place_id: str) -> dict:
+    def get_place_details(self, place_id, city_name=None) -> dict:
         """
         Fetches detailed information about a place using its place_id.
         """
@@ -92,5 +92,8 @@ class Feed:
             "map_directions": request_data["googleMapsLinks"]["directionsUri"],
             "write_a_review_url": request_data["googleMapsLinks"]["writeAReviewUri"]
         }
+
+        if city_name is not None:
+            place_data["city_name"] = city_name
         
         return place_data

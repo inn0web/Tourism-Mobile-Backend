@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, PasswordResetCode, Category
+from .models import User, PasswordResetCode, Category, UserSavedPlace
 from import_export.admin import ImportExportModelAdmin
 
 class UserAdmin(ImportExportModelAdmin, admin.ModelAdmin):
@@ -24,3 +24,11 @@ class CategoryAdmin(ImportExportModelAdmin, admin.ModelAdmin):
     search_fields = ['name', 'id']
 
 admin.site.register(Category, CategoryAdmin)
+
+class UserSavedPlacesAdmin(ImportExportModelAdmin, admin.ModelAdmin):
+
+    list_display = ['user', 'place_id', 'city_name', 'date']
+    search_fields = ['user__email', 'place_id', 'city_name']
+    list_filter = ['date']
+
+admin.site.register(UserSavedPlace, UserSavedPlacesAdmin)

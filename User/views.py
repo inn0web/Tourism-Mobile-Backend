@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import User, PasswordResetCode, Category
+from .models import User, PasswordResetCode, Category, UserSavedPlace
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -14,6 +14,8 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from .utils import is_valid_email, authenticate_credentials
 from .serializers import UserSerializer, CategorySerializer
 from django.utils.crypto import get_random_string
+from Places.models import City
+from Places.utils import Feed
 
 @swagger_auto_schema(
     method='post',
@@ -889,3 +891,284 @@ def update_user_interests(request):
         "user": UserSerializer(user).data
     }, status=status.HTTP_200_OK)
 
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Save a place for a user",
+    operation_description="""
+    This endpoint allows an authenticated user to save a place associated with a specific city.
+    
+    If the place has already been saved by the user, it returns an error message.
+    
+    - 🔐 Authentication required  
+    - `city_id` must refer to a valid City  
+    - `place_id` must be included in the request body
+    """,
+    manual_parameters=[
+        openapi.Parameter(
+            'city_id',
+            openapi.IN_PATH,
+            description="ID of the city where the place is located",
+            type=openapi.TYPE_INTEGER,
+            required=True
+        ),
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['place_id'],
+        properties={
+            'place_id': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="The unique identifier of the place (Google Place ID)"
+            )
+        }
+    ),
+    responses={
+        201: openapi.Response(
+            description="Place saved successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING, example="success"),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, example="Place saved successfully")
+                }
+            )
+        ),
+        400: openapi.Response(
+            description="Place already saved or invalid input",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING, example="error"),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, example="Place already saved")
+                }
+            )
+        ),
+        404: openapi.Response(
+            description="City not found",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING, example="error"),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, example="City not found")
+                }
+            )
+        )
+    },
+    tags=["Places"]
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_place(request, city_id):
+
+    try:
+        city = City.objects.get(id=city_id)
+    except City.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "City not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    place_id = request.data.get('place_id')
+
+    user = request.user
+    user_saved_place, created = UserSavedPlace.objects.get_or_create(
+        user=user,
+        city_name=city.name,
+        place_id=place_id
+    )
+    if created:
+        return Response({
+            "status": "success",
+            "message": "Place saved successfully"
+        }, status=status.HTTP_201_CREATED)
+    else:
+        return Response({
+            "status": "error",
+            "message": "Place already saved"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@swagger_auto_schema(
+    method='delete',
+    operation_summary="Delete a saved place for a user",
+    operation_description="""
+    This endpoint allows an authenticated user to delete a place they previously saved within a specific city.
+
+    - 🔐 Authentication required  
+    - `city_id` must refer to a valid City  
+    - `place_id` must be provided in the request body  
+    """,
+    manual_parameters=[
+        openapi.Parameter(
+            'city_id',
+            openapi.IN_PATH,
+            description="ID of the city where the saved place is located",
+            type=openapi.TYPE_INTEGER,
+            required=True
+        )
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['place_id'],
+        properties={
+            'place_id': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="The unique identifier of the place to be deleted"
+            )
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="Place deleted successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING, example="success"),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, example="Place deleted successfully"),
+                }
+            )
+        ),
+        404: openapi.Response(
+            description="City or saved place not found",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING, example="error"),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, example="Place not found in saved places"),
+                }
+            )
+        ),
+    },
+    tags=["Places"]
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_saved_place(request, city_id):
+    try:
+        city = City.objects.get(id=city_id)
+    except City.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "City not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    place_id = request.data.get('place_id')
+
+    user = request.user
+    try:
+        user_saved_place = UserSavedPlace.objects.get(
+            user=user,
+            city_name=city.name,
+            place_id=place_id
+        )
+        user_saved_place.delete()
+        return Response({
+            "status": "success",
+            "message": "Place deleted successfully"
+        }, status=status.HTTP_200_OK)
+    except UserSavedPlace.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "Place not found in saved places"
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@swagger_auto_schema(
+    method='get',
+    operation_summary="List a user's saved places",
+    operation_description="""
+Returns the full details for every place the authenticated user has saved in the given city.
+
+- 🔐 Authentication required  
+- `city_id` must refer to an existing City 
+- If the user has no saved places, returns an empty list `[]`
+""",
+    manual_parameters=[
+        openapi.Parameter(
+            'city_id',
+            in_=openapi.IN_PATH,
+            description="ID of the city whose saved places to retrieve",
+            type=openapi.TYPE_INTEGER,
+            required=True
+        )
+    ],
+    responses={
+        200: openapi.Response(
+            description="A list of detailed place objects (possibly empty)",
+            schema=openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "place_id": openapi.Schema(type=openapi.TYPE_STRING),
+                        "name": openapi.Schema(type=openapi.TYPE_STRING),
+                        "address": openapi.Schema(type=openapi.TYPE_STRING),
+                        "phone": openapi.Schema(
+                            type=openapi.TYPE_STRING,
+                            description="International phone number (optional, might not be available)"
+                        ),
+                        "rating": openapi.Schema(type=openapi.TYPE_NUMBER, format="float"),
+                        "reviews": openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    "author": openapi.Schema(type=openapi.TYPE_STRING),
+                                    "text": openapi.Schema(type=openapi.TYPE_STRING),
+                                    "rating": openapi.Schema(type=openapi.TYPE_NUMBER, format="float"),
+                                    "author_image": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI),
+                                    "publish_time": openapi.Schema(type=openapi.TYPE_STRING, format="date-time"),
+                                }
+                            )
+                        ),
+                        "photos": openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    "url": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI)
+                                }
+                            )
+                        ),
+                        "opening_hours": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            description="Opening hours (optional, might not be available)"
+                        ),
+                        "map_directions": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI),
+                        "write_a_review_url": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI),
+                        "city_name": openapi.Schema(type=openapi.TYPE_STRING),
+                    }
+                )
+            )
+        ),
+    },
+    tags=["Places"]
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_saved_places(request, city_id):
+
+    try:
+        city = City.objects.get(id=city_id)
+    except City.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "City not found"
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    user = request.user
+    saved_places = UserSavedPlace.objects.filter(user=user)
+
+    if saved_places.exists():
+
+        user_saved_places = []
+
+        for saved_place in saved_places:
+            get_place_by_place_id = Feed().get_place_details(
+                place_id=saved_place.place_id,
+                city_name = city.name
+            )
+            if get_place_by_place_id:
+                user_saved_places.append(get_place_by_place_id)
+    
+        return Response(user_saved_places, status=status.HTTP_200_OK)
+    
+    return Response([], status=status.HTTP_200_OK)

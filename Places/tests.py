@@ -48,5 +48,5 @@ def place():
     with open("place.json", "w", encoding="utf-8") as f:
         json.dump(_place, f, indent=4, ensure_ascii=False)
 
-# place()
-get_place_from_requests()
+place()
+# get_place_from_requests()
