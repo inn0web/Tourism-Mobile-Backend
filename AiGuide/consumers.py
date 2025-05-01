@@ -10,6 +10,11 @@ from Places.models import City
 
 class EuroTripAiConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+
+        # initialise open ai and the assistants 
+        self.client = OpenAI(
+            api_key=config("OPENAI_API_KEY") 
+        )
         
         self.user_id = self.scope['url_route']['kwargs']['user_id']
         self.current_city_name = self.scope['url_route']['kwargs']['city_name']
@@ -17,20 +22,17 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
         try:
             self.thread_id = self.scope['url_route']['kwargs']['thread_id']
             self.thread = self.client.beta.threads.retrieve(thread_id=self.thread_id)
+            
+            await self.set_current_city_name_and_location()
 
             self.room_name = f"eurotrip_chat_session_{self.user_id}_{self.thread_id}"
-        except:
+        except Exception as e:
             self.thread_id = None
             # If thread_id is not provided, create a new thread
             self.room_name = f"eurotrip_chat_session_{self.user_id}"
         
         await self.channel_layer.group_add(self.room_name, self.channel_name)
         await self.accept()
-
-        # initialise open ai and the assistants 
-        self.client = OpenAI(
-            api_key=config("OPENAI_API_KEY") 
-        )
 
         self.assistant = self.client.beta.assistants.retrieve(
             assistant_id = config('OPENAI_ASSISTANT_ID'),
@@ -163,6 +165,9 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
             # call event to send message to client
             await self.channel_layer.group_send(self.room_name, event)
 
+            # save this message/response to the database as a new user thread message
+            await self.save_user_message_to_a_new_thread_message_in_database(user_message={"message": message})
+            
             # save this message/response to the database as a new ai guide thread message
             await self.save_ai_response_to_a_new_thread_message_in_database(ai_response)
 
@@ -195,8 +200,15 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
     def save_ai_response_to_a_new_thread_message_in_database(self, ai_response):
 
         # Create a new thread in the database
-        thread = Thread.objects.get(thread_id=self.thread.id)
+        thread = Thread.objects.get(thread_id=self.thread_id)
         thread.create_new_message(sent_by="ai", message_content=ai_response)
+
+    @database_sync_to_async
+    def save_user_message_to_a_new_thread_message_in_database(self, user_message):
+
+        # Create a new thread in the database
+        thread = Thread.objects.get(thread_id=self.thread_id)
+        thread.create_new_message(sent_by="user", message_content=user_message)
 
     @database_sync_to_async
     def set_current_city_name_and_location(self):
