@@ -52,6 +52,8 @@ SWAGGER_SETTINGS = {
 
 INSTALLED_APPS = [
     'jazzmin',
+    'channels',
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -70,6 +72,7 @@ INSTALLED_APPS = [
     'import_export',
     'Blog',
     'django_ckeditor_5',
+    'AiGuide',
 ]
 
 MIDDLEWARE = [
@@ -88,7 +91,7 @@ ROOT_URLCONF = 'Tourism.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -102,6 +105,11 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'Tourism.wsgi.application'
+ASGI_APPLICATION = "Tourism.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"},
+}
 
 
 # Database
@@ -219,6 +227,7 @@ JAZZMIN_SETTINGS = {
 
         # {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
         {"app": "User"},
+        {"app": "AiGuide"},
         {"app": "Places"},
         {"app": "Blog"},
 

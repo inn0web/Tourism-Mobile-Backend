@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>EuroTrip AI Chat Test</title>
+</head>
+<body>
+  <h1>EuroTrip AI Assistant</h1>
+  <textarea id="messageInput" rows="4" cols="50" placeholder="Type your message..."></textarea>
+  <br />
+  <button onclick="sendMessage()">Send Message</button>
+
+  <h3>Socket Log:</h3>
+  <pre id="log"></pre>
+
+  <script>
+    const userId = 1;  // Replace with actual user ID
+    const socket = new WebSocket(`ws://localhost:8000/ai-guide/Pogradec/${userId}/thread_eL3zpwy7s3u7ze1qbTIVK69t/`);
+
+    socket.onopen = function () {
+      log('WebSocket connection opened');
+    };
+
+    socket.onmessage = function (event) {
+      log('Message from server: ' + event.data);
+    };
+
+    socket.onclose = function () {
+      log('WebSocket connection closed');
+    };
+
+    socket.onerror = function (error) {
+      log('WebSocket error: ' + error);
+    };
+
+    function sendMessage() {
+      const message = document.getElementById('messageInput').value;
+      if (message) {
+        const payload = JSON.stringify({ message });
+        socket.send(payload);
+        log('Message sent: ' + payload);
+      } else {
+        log('Please type a message first');
+      }
+    }
+
+    function log(message) {
+      const logElement = document.getElementById('log');
+      logElement.textContent += message + '\n';
+    }
+  </script>
+</body>
+</html>

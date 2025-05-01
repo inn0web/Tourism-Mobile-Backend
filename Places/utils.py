@@ -8,7 +8,45 @@ class Feed:
         self.api_key = settings.GOOGLE_API_KEY
         self.client = Client(key=self.api_key)
 
-    def get_places_from_google_maps(self, city_name, city_location: tuple, user_interests: list) -> dict:
+    def get_places_from_google_maps_for_ai_request(self, city_name, city_location, extracted_search_interests_from_message):
+
+        place_ids = []
+        place_details = []
+
+        # search for places based on extracted interests
+        for interest in extracted_search_interests_from_message:
+
+            places = self.client.places_nearby(
+                location=city_location,
+                radius=5000,  # Search within 5km radius
+                keyword=interest
+            )
+
+            for place in places["results"]:
+
+                if len(place_ids) >= 5:
+                    break
+
+                # make sure this place has images
+                if "photos" not in place:
+                    continue
+
+                place_ids.append(place["place_id"])
+
+        # get the detail of each place and append to list
+        for place_id in place_ids:
+
+            place_detail = self.get_place_details(
+                place_id=place_id, 
+                is_ai_request=True,
+                city_name=city_name
+            )
+
+            place_details.append(place_detail)
+
+        return place_details
+
+    def get_places_from_google_maps(self, city_name, city_location, user_interests):
         
         # Dictionary to store results
         user_feed = {
@@ -57,7 +95,7 @@ class Feed:
 
         return user_feed
 
-    def get_place_details(self, place_id, city_name=None) -> dict:
+    def get_place_details(self, place_id, is_ai_request=False, city_name=None) -> dict:
         """
         Fetches detailed information about a place using its place_id.
         """
@@ -67,22 +105,16 @@ class Feed:
 
         request_data = request_place_details.json()
 
+        # print('\n\n-> gotten place details:')
+        # print(request_data)
+
         # extract required fields from response
         place_data = {
             "place_id": request_data["id"],
             "name": request_data["displayName"]["text"],
             "address": request_data["formattedAddress"],
             "phone": request_data.get("internationalPhoneNumber"),
-            "rating": request_data["rating"],
-            "reviews": [
-                {
-                    "author": review["authorAttribution"]["displayName"],
-                    "text": review["text"],
-                    "rating": review["rating"],
-                    "author_image": review["authorAttribution"]["photoUri"],
-                    "publish_time": review["publishTime"]
-                } for review in request_data["reviews"]
-            ],
+            "rating": request_data.get("rating", ""),
             "photos": [
                 {
                     "url": photo["authorAttributions"][0]["photoUri"]
@@ -90,10 +122,22 @@ class Feed:
             ],
             "opening_hours": request_data.get("currentOpeningHours"),
             "map_directions": request_data["googleMapsLinks"]["directionsUri"],
-            "write_a_review_url": request_data["googleMapsLinks"]["writeAReviewUri"]
         }
 
         if city_name is not None:
             place_data["city_name"] = city_name
+
+        if not is_ai_request:
+            place_data["reviews"] = [
+                {
+                    "author": review["authorAttribution"]["displayName"],
+                    "text": review["text"],
+                    "rating": review["rating"],
+                    "author_image": review["authorAttribution"]["photoUri"],
+                    "publish_time": review["publishTime"]
+                } for review in request_data["reviews"]
+            ]
+            
+            place_data["write_a_review_url"] = request_data["googleMapsLinks"]["writeAReviewUri"]
         
         return place_data

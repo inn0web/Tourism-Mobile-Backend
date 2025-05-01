@@ -24,6 +24,7 @@ urlpatterns = [
    path('user/', include('User.urls')),
    path('places/', include('Places.urls')),
    path('blog/', include('Blog.urls')),
+   path('ai/', include('AiGuide.urls')),
 
    path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
