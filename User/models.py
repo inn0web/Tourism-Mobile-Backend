@@ -78,6 +78,11 @@ class User(AbstractBaseUser, PermissionsMixin):
             email_message.fail_silently = True
             email_message.send()
 
+    def get_user_threads(self):
+        from AiGuide.models import Thread
+        return Thread.objects.filter(user=self).order_by('-created_when')
+
+
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'email'

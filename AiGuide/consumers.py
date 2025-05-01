@@ -7,7 +7,6 @@ from decouple import config
 from .models import Thread
 from Places.utils import Feed
 from Places.models import City
-
 class EuroTripAiConsumer(AsyncWebsocketConsumer):
     async def connect(self):
 
@@ -41,7 +40,6 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.room_name, self.channel_name)
 
-
     def generate_thread_name(self, message):
 
         instruction = f"""
@@ -65,7 +63,6 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
         )
 
         return response.output_text.strip('"')
-
 
     def extract_google_places_searchable_keywords_from_user_message(self, message):
 
@@ -95,7 +92,6 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
         )
 
         return response.output_text.strip('"').split(',')
-
 
     async def create_new_open_ai_thread(self, message):
 
@@ -155,7 +151,17 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
             )
 
             ai_response = ai_message.data[0].content[0].text.value
-            print(f"\n\n\nAI Response: {ai_response}\n\n\n")
+
+            # parse the AI response to a JSON object if it is a string
+            # This is to ensure that the response is in a valid JSON format
+            if isinstance(ai_response, str):
+                try:
+                    # Attempt to parse the string as JSON
+                    ai_response = json.loads(ai_response)
+                except json.JSONDecodeError:
+                    print("Error: Invalid AI response format.")
+                    return
+           
             # send message back to client
             event = {
                 'type': 'send_message',
