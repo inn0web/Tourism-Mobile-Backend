@@ -7,3 +7,5 @@ request_detail_full.json
 .vscode
 .rmv
 _requests
+__pycache__
+__pycache__/
