@@ -7,6 +7,7 @@ from decouple import config
 from .models import Thread
 from Places.utils import Feed
 from Places.models import City
+
 class EuroTripAiConsumer(AsyncWebsocketConsumer):
     async def connect(self):
 
@@ -129,7 +130,7 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
         places = json.dumps(places, indent=4)
         
         # create a new message to ve sent to openai
-        construct_message = self.client.beta.threads.messages.create(
+        self.client.beta.threads.messages.create(
             thread_id=self.thread.id,
             role="user",
             content=places

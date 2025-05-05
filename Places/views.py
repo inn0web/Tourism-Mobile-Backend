@@ -52,6 +52,13 @@ def all_cities(request):
             description="ID of the city to retrieve user-specific places for.",
             type=openapi.TYPE_INTEGER,
             required=True
+        ),
+        openapi.Parameter(
+            'categories',
+            openapi.IN_QUERY,
+            description="Comma-separated list of categories to search for places. If not provided, the user's saved interests will be used. Examlple: `?categories=restaurant,park,museum`",
+            type=openapi.TYPE_STRING,
+            required=False
         )
     ],
     responses={
@@ -98,12 +105,10 @@ def all_cities(request):
                 }
             )
         ),
-        401: openapi.Response(
-            description="Unauthorized"
-        )
+        401: openapi.Response(description="Unauthorized")
     },
     operation_summary="Get User Feed",
-    operation_description="Returns a categorized list of places ('recommended' and 'popular') based on the user's interests and the specified city.",
+    operation_description="Returns a categorized list of places ('recommended' and 'popular') based on the user's interests and the specified city. If the `categories` query parameter is provided, it will override the user's saved interests.",
     tags=['Places']
 )
 @api_view(['GET'])
@@ -117,23 +122,37 @@ def get_user_feed(request, city_id):
             "status": "error",
             "message": "City not found"
         }, status=status.HTTP_404_NOT_FOUND)
-
-    user = request.user
-    interests = user.interests.values_list('name', flat=True)
-
-    if not interests:
-        return Response({
-            "status": "error",
-            "message": "User has no interests selected"
-        }, status=status.HTTP_400_BAD_REQUEST)
     
-    get_user_feed = Feed().get_places_from_google_maps(
-        city_name=city.name,
-        city_location=(city.latitude, city.longitude),
-        user_interests=interests
-    )
+    categories = request.query_params.get('categories')
+    
+    # get places by selected categories
+    if categories:
+        try:
+            interests = categories.split(',')
+        except:
+            return Response({
+                "status": "error",
+                "message": "Category must be passed as parameter in the format: caregory1,category2,category3"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(get_user_feed, status=status.HTTP_200_OK)
+    # get places via user interests
+    else:
+        user = request.user
+        interests = user.interests.values_list('name', flat=True)
+
+        if not interests:
+            return Response({
+                "status": "error",
+                "message": "User has no interests selected"
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        get_user_feed = Feed().get_places_from_google_maps(
+            city_name=city.name,
+            city_location=(city.latitude, city.longitude),
+            user_interests=interests
+        )
+
+        return Response(get_user_feed, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
     method='get',
