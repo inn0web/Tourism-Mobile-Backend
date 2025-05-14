@@ -2,6 +2,7 @@ import json
 from googlemaps import Client
 from django.conf import settings
 import requests
+import random
 
 class Feed:
     def __init__(self):
@@ -94,6 +95,11 @@ class Feed:
                 except (ValueError, TypeError):
                     # Fallback if rating can't be converted to float
                     user_feed["recommended"].append(place_data)
+
+        # shuffle the lists to randomize the order
+        
+        random.shuffle(user_feed["recommended"])
+        random.shuffle(user_feed["popular"])
 
         return user_feed
 
