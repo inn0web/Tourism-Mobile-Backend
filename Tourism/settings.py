@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'Blog',
     'django_ckeditor_5',
     'AiGuide',
+    'Adds',
 ]
 
 MIDDLEWARE = [
@@ -230,6 +231,7 @@ JAZZMIN_SETTINGS = {
         {"app": "AiGuide"},
         {"app": "Places"},
         {"app": "Blog"},
+        {"app": "Adds"},
 
 
     ],
@@ -376,3 +378,5 @@ CKEDITOR_5_CONFIGS = {
 
 # Define a constant in settings.py to specify file upload permissions
 CKEDITOR_5_FILE_UPLOAD_PERMISSION = "authenticated"
+
+DEFAULT_PLACE_CATEGORIES = config('DEFAULT_PLACE_CATEGORIES').split(',')

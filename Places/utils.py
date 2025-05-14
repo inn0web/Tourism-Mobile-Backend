@@ -8,6 +8,8 @@ class Feed:
         self.api_key = settings.GOOGLE_API_KEY
         self.client = Client(key=self.api_key)
 
+        self.google_places_base_url = 'https://places.googleapis.com/v1'
+
     def get_places_from_google_maps_for_ai_request(self, city_name, city_location, extracted_search_interests_from_message):
 
         place_ids = []
@@ -100,13 +102,10 @@ class Feed:
         Fetches detailed information about a place using its place_id.
         """
         request_place_details = requests.get(
-            f"https://places.googleapis.com/v1/places/{place_id}?fields=*&key={self.api_key}"
+            f"{self.google_places_base_url}/places/{place_id}?fields=*&key={self.api_key}"
         )
 
         request_data = request_place_details.json()
-
-        # print('\n\n-> gotten place details:')
-        # print(request_data)
 
         # extract required fields from response
         place_data = {
@@ -117,12 +116,14 @@ class Feed:
             "rating": request_data.get("rating", ""),
             "photos": [
                 {
-                    "url": photo["authorAttributions"][0]["photoUri"]
+                    "url": f"{self.google_places_base_url}/{photo['name']}/media?key={self.api_key}",
                 } for photo in request_data["photos"]
             ],
             "opening_hours": request_data.get("currentOpeningHours"),
             "map_directions": request_data["googleMapsLinks"]["directionsUri"],
         }
+
+        # https://places.googleapis.com/v1/NAME/media?key=API_KEY&PARAMETERS
 
         if city_name is not None:
             place_data["city_name"] = city_name

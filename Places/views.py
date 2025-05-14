@@ -5,14 +5,11 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .models import City
 from .serializers import CitySerializer
-from googlemaps import Client
-from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from .utils import Feed
 from User.models import Category
-
-gmaps = Client(key=settings.GOOGLE_API_KEY)
+from django.conf import settings
 
 @swagger_auto_schema(
     method='get',
@@ -141,10 +138,13 @@ def get_user_feed(request, city_id):
         interests = user.interests.values_list('name', flat=True)
 
         if not interests:
-            return Response({
-                "status": "error",
-                "message": "User has no interests selected"
-            }, status=status.HTTP_400_BAD_REQUEST)
+            # return Response({
+            #     "status": "error",
+            #     "message": "User has no interests selected"
+            # }, status=status.HTTP_400_BAD_REQUEST)
+
+            # use default interests from settings
+            interests = settings.DEFAULT_PLACE_CATEGORIES
         
         get_user_feed = Feed().get_places_from_google_maps(
             city_name=city.name,

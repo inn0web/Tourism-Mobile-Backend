@@ -27,6 +27,7 @@ urlpatterns = [
    path(f'api/{version}/places/', include('Places.urls')),
    path(f'api/{version}/blog/', include('Blog.urls')),
    path(f'api/{version}/ai/', include('AiGuide.urls')),
+   path(f'api/{version}/adds/', include('Adds.urls')),
 
    path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),
    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
