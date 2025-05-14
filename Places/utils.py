@@ -122,7 +122,7 @@ class Feed:
             "rating": request_data.get("rating", ""),
             "photos": [
                 {
-                    "url": f"{self.google_places_base_url}/{photo['name']}/media?key={self.api_key}",
+                    "url": f"{self.google_places_base_url}/{photo['name']}/media?key={self.api_key}&maxHeightPx=400&maxWidthPx=400",
                 } for photo in request_data["photos"]
             ],
             "opening_hours": request_data.get("currentOpeningHours"),
