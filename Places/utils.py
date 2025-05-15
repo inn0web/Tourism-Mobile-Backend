@@ -136,7 +136,7 @@ class Feed:
         if city_name is not None:
             place_data["city_name"] = city_name
 
-        if not is_ai_request:
+        if not is_ai_request and request_data.get("reviews"):
             place_data["reviews"] = [
                 {
                     "author": review["authorAttribution"]["displayName"],
