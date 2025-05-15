@@ -178,6 +178,7 @@ def get_user_feed(request, city_id):
                     type=openapi.TYPE_ARRAY,
                     items=openapi.Schema(
                         type=openapi.TYPE_OBJECT,
+                        description="User reviews (optional; may be missing for non-businesses)",
                         properties={
                             'author': openapi.Schema(type=openapi.TYPE_STRING),
                             'text': openapi.Schema(type=openapi.TYPE_STRING),

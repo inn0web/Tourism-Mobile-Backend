@@ -113,6 +113,8 @@ class Feed:
 
         request_data = request_place_details.json()
 
+        print(json.dumps(request_data, indent=4))
+
         # extract required fields from response
         place_data = {
             "place_id": request_data["id"],
@@ -138,11 +140,11 @@ class Feed:
             place_data["reviews"] = [
                 {
                     "author": review["authorAttribution"]["displayName"],
-                    "text": review["text"],
+                    "text": review.get("text", ""),
                     "rating": review["rating"],
                     "author_image": review["authorAttribution"]["photoUri"],
                     "publish_time": review["publishTime"]
-                } for review in request_data["reviews"]
+                } for review in request_data["reviews"] if review.get("text") and review.get("rating")
             ]
             
             place_data["write_a_review_url"] = request_data["googleMapsLinks"]["writeAReviewUri"]
