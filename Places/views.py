@@ -146,13 +146,13 @@ def get_user_feed(request, city_id):
             # use default interests from settings
             interests = settings.DEFAULT_PLACE_CATEGORIES
         
-        get_user_feed = Feed().get_places_from_google_maps(
-            city_name=city.name,
-            city_location=(city.latitude, city.longitude),
-            user_interests=interests
-        )
+    get_user_feed = Feed().get_places_from_google_maps(
+        city_name=city.name,
+        city_location=(city.latitude, city.longitude),
+        user_interests=interests
+    )
 
-        return Response(get_user_feed, status=status.HTTP_200_OK)
+    return Response(get_user_feed, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
     method='get',
