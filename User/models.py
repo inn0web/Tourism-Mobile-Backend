@@ -40,7 +40,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=30, default='', null=True, blank=True, help_text="The user's last name.")
     
     phone = models.CharField(max_length=15, default='', null=True, blank=True, help_text="The user's phone number.")
-    profile_image = models.FileField(null=True, blank=True, help_text="User's profile image")
+    profile_image = models.FileField(null=True, blank=True, upload_to='Eurotrip/users/', help_text="User's profile image")
     interests = models.ManyToManyField(Category, blank=True, help_text="The user's interests")
 
     is_staff =  models.BooleanField(default=False)
