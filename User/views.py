@@ -707,11 +707,24 @@ def update_user_account(request):
 
     user = request.user
 
+    first_or_last_name_updated = False
+
     if first_name and first_name != user.first_name:
         user.first_name = first_name
-
+        first_or_last_name_updated = True
+    
     if last_name and last_name != user.last_name:
         user.last_name = last_name
+        first_or_last_name_updated = True
+
+    # check if first or last names were entered and save user 
+    if first_or_last_name_updated:
+        user.save()
+
+        return Response({
+            "status": "success",
+            "message": "Name updated successfully"
+        }, status=status.HTTP_200_OK)
 
     if email and email != user.email:
 
@@ -748,9 +761,23 @@ def update_user_account(request):
 
     if language and language != user.language:
         user.language = language
+        user.save()
+
+        return Response({
+            "status": "success",
+            "message": "Language updated successfully"
+        }, status=status.HTTP_200_OK)
+    
 
     if notification_enabled != user.notification_enabled:
         user.notification_enabled = notification_enabled
+        user.save()
+
+        return Response({
+            "status": "success",
+            "message": "Notification updated successfully"
+        }, status=status.HTTP_200_OK)
+    
 
     if password and confirm_password and current_password:
 
