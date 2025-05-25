@@ -645,6 +645,8 @@ def reset_password(request):
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
+            'first_name': openapi.Schema(type=openapi.TYPE_STRING, description="New first name"),
+            'last_name': openapi.Schema(type=openapi.TYPE_STRING, description="New last name"),
             'email': openapi.Schema(type=openapi.TYPE_STRING, description="New email address"),
             'phone': openapi.Schema(type=openapi.TYPE_STRING, description="New phone number"),
             'current_password': openapi.Schema(type=openapi.TYPE_STRING, description="Current password for verification"),
@@ -693,8 +695,8 @@ def reset_password(request):
 def update_user_account(request):
 
     email = request.data.get('email')
-    # first_name = request.data.get('first_name')
-    # last_name = request.data.get('last_name')
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
     phone = request.data.get('phone')
     password = request.data.get('password')
     current_password = request.data.get('current_password')
@@ -704,6 +706,12 @@ def update_user_account(request):
     notification_enabled = request.data.get('notification_enabled', False)
 
     user = request.user
+
+    if first_name and first_name != user.first_name:
+        user.first_name = first_name
+
+    if last_name and last_name != user.last_name:
+        user.last_name = last_name
 
     if email and email != user.email:
 
