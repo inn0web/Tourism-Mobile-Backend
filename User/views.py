@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from .utils import is_valid_email, authenticate_credentials
+from .utils import is_valid_email, authenticate_credentials, is_valid_phone_number
 from .serializers import UserSerializer, CategorySerializer
 from django.utils.crypto import get_random_string
 from Places.models import City
@@ -44,6 +44,8 @@ from Places.utils import Feed
                         "last_name": "Doe",
                         "phone": "1234567890",
                         "interests": [],
+                        'language': "en",
+                        "notification_enabled": False,
                         "is_active": True,
                         "date_joined": "2024-10-10T12:34:56Z",
                         "profile_image": "https://example.com/profile.jpg",
@@ -85,7 +87,12 @@ def register_user(request):
             "status": "error",
             "message": "Email, first name, lastname, and password are required fields"
         }, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    if phone and not is_valid_phone_number(phone):
+        return Response({
+            "status": "error",
+            "message": "Invalid phone number entered"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     if not is_valid_email(email):
         return Response({
@@ -634,7 +641,7 @@ def reset_password(request):
 
 @swagger_auto_schema(
     method='patch',
-    operation_description="Update user details such as email, phone, password, or profile image.",
+    operation_description="Update user details such as email, phone, password, profile image, language, or notification settings.",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -644,6 +651,8 @@ def reset_password(request):
             'password': openapi.Schema(type=openapi.TYPE_STRING, description="New password"),
             'confirm_password': openapi.Schema(type=openapi.TYPE_STRING, description="Confirm new password"),
             'profile_image': openapi.Schema(type=openapi.TYPE_FILE, description="New profile image"),
+            'language': openapi.Schema(type=openapi.TYPE_STRING, description="Preferred language", default='en'),
+            'notification_enabled': openapi.Schema(type=openapi.TYPE_BOOLEAN, description="Enable notifications", default=False),
         },
         required=[]
     ),
@@ -691,6 +700,8 @@ def update_user_account(request):
     current_password = request.data.get('current_password')
     confirm_password = request.data.get('confirm_password')
     profile_image = request.FILES.get('profile_image')
+    language = request.data.get('language', 'en')
+    notification_enabled = request.data.get('notification_enabled', False)
 
     user = request.user
 
@@ -712,6 +723,12 @@ def update_user_account(request):
     
     if phone and phone != user.phone:
 
+        if not is_valid_phone_number(phone):
+            return Response({
+                "status": "error",
+                "message": "Invalid phone number entered"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         user.phone = phone
         user.save()
 
@@ -720,6 +737,13 @@ def update_user_account(request):
             "message": "Phone updated successfully"
         }, status=status.HTTP_200_OK)
     
+
+    if language and language != user.language:
+        user.language = language
+
+    if notification_enabled != user.notification_enabled:
+        user.notification_enabled = notification_enabled
+
     if password and confirm_password and current_password:
 
         if not user.check_password(current_password):

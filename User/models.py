@@ -43,6 +43,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     profile_image = models.FileField(null=True, blank=True, upload_to='Eurotrip/users/', help_text="User's profile image")
     interests = models.ManyToManyField(Category, blank=True, help_text="The user's interests")
 
+    language = models.CharField(max_length=30, default='en', help_text="The user's preferred language. Defaults to 'en' (English).")
+    notification_enabled = models.BooleanField(default=False)
+
     is_staff =  models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False, help_text="Indicates whether the user has all admin permissions. Defaults to False.")
     is_active = models.BooleanField(default=True, help_text="Indicates whether the user account is active. Defaults to False and user needs to verify email on signup before it can be set to True.")

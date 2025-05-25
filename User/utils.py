@@ -9,10 +9,16 @@ def is_valid_email(email):
 
     # Regular expression for a valid email
     pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-    if re.match(pattern, email):
-        return True
+    return bool(re.match(pattern, email))
+
+def is_valid_phone_number(phone):
+    # Remove all spaces from the input
+    phone = phone.replace(" ", "")
     
-    return False
+    # Basic E.164 validation: optional +, followed by 10 to 15 digits
+    pattern = r'^\+?[1-9]\d{9,14}$'
+    return bool(re.match(pattern, phone))
+
 
 def authenticate_credentials(email, password):
 

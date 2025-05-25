@@ -16,7 +16,7 @@ schema_view = get_schema_view(
    ),
    public=True,
    permission_classes=(permissions.AllowAny,),
-   # url=config("SWAGGER_DOCS_BASE_URL"),
+   url=config("SWAGGER_DOCS_BASE_URL"),
 )
 
 version = 'v1'
