@@ -71,10 +71,14 @@ class Feed:
                 if "photos" not in place:
                     continue
 
-                place_image_reference = place["photos"][0]["photo_reference"]
-                # Construct the image URL using the photo reference
-                image_url = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference={place_image_reference}&key={self.api_key}"
+                try:
+                    place_image_reference = place["photos"][0]["photo_reference"]
+                    # Construct the image URL using the photo reference
+                    image_url = f"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference={place_image_reference}&key={self.api_key}"
 
+                except KeyError:    
+                    continue
+                
                 place_rating = place.get("rating", "Not Rated")
 
                 # Prepare common data
@@ -113,7 +117,7 @@ class Feed:
 
         request_data = request_place_details.json()
 
-        print(json.dumps(request_data, indent=4))
+        # print(json.dumps(request_data, indent=4))
 
         # extract required fields from response
         place_data = {

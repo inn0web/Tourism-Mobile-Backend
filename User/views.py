@@ -1317,3 +1317,66 @@ def delete_user_search_history(request):
         "status": "success",
         "message": "Search history cleared successfully"
     }, status=status.HTTP_200_OK)
+
+@swagger_auto_schema(
+    method='delete',
+    operation_description="Delete a specific search history record by its ID",
+    operation_summary="Delete Single Search History",
+    tags=['Search History'],
+    manual_parameters=[
+        openapi.Parameter(
+            'search_id',
+            openapi.IN_PATH,
+            description="ID of the search history record to delete",
+            type=openapi.TYPE_INTEGER,
+            required=True
+        )
+    ],
+    responses={
+        200: openapi.Response(
+            description="Search history deleted successfully",
+            examples={
+                'application/json': {
+                    "status": "success",
+                    "message": "Search history deleted successfully"
+                }
+            }
+        ),
+        404: openapi.Response(
+            description="Search history not found",
+            examples={
+                'application/json': {
+                    "status": "error",
+                    "message": "Search history not found"
+                }
+            }
+        ),
+        401: openapi.Response(
+            description="Authentication required",
+            examples={
+                'application/json': {
+                    "detail": "Authentication credentials were not provided."
+                }
+            }
+        )
+    },
+    security=[{'Bearer': []}],
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_a_single_search_history(request, search_id):
+    """
+    Delete a specific search history record by its ID.
+    """
+    try:
+        search_history = UserSearchHistory.objects.get(id=search_id, user=request.user)
+        search_history.delete()
+        return Response({
+            "status": "success",
+            "message": "Search history deleted successfully"
+        }, status=status.HTTP_200_OK)
+    except UserSearchHistory.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "Search history not found"
+        }, status=status.HTTP_404_NOT_FOUND)

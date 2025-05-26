@@ -8,6 +8,7 @@ from .views import (
     update_user_interests, save_place,
     delete_saved_place, get_user_saved_places,
     get_user_search_history, delete_user_search_history,
+    delete_a_single_search_history,
 )
 urlpatterns = [
     path('register/', register_user),
@@ -32,4 +33,5 @@ urlpatterns = [
 
     path('search-history/', get_user_search_history),
     path('delete-search-history/', delete_user_search_history),
+    path('delete-search-history/<int:search_id>/', delete_a_single_search_history),
 ]

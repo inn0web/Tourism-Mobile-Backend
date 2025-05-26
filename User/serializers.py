@@ -21,4 +21,4 @@ class UserSearchHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserSearchHistory
-        fields = ['search', 'date']
+        fields = ['id', 'search', 'date']
