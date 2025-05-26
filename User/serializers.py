@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from .models import User, Category
+from .models import User, Category, UserSearchHistory
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['name']
+        fields = ['name', 'icon']
 
 class UserSerializer(serializers.ModelSerializer):
     profile_image = serializers.SerializerMethodField()
@@ -16,3 +16,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_profile_image(self, obj):
         return obj.user_profile_image()
+    
+class UserSearchHistorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserSearchHistory
+        fields = ['search', 'date']

@@ -10,6 +10,7 @@ from rest_framework.decorators import permission_classes
 from .utils import Feed
 from User.models import Category
 from django.conf import settings
+from User.models import UserSearchHistory
 
 @swagger_auto_schema(
     method='get',
@@ -346,7 +347,6 @@ def get_place_details(request, place_id):
     }
 )
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def search_for_places(request, city_id):
 
     try:
@@ -372,6 +372,15 @@ def search_for_places(request, city_id):
     if search_query:
         user_interests.append(search_query)
 
+        user = request.user
+        if user.is_authenticated:
+
+            # create a new search history entry for user
+            history, created = UserSearchHistory.objects.get_or_create(
+                user = user,
+                search = search_query
+            )
+
     if selected_interests:
         if not isinstance(selected_interests, list) or not all(isinstance(i, str) for i in selected_interests):
             return Response({
@@ -382,15 +391,19 @@ def search_for_places(request, city_id):
         # Fetch matching categories
         categories = Category.objects.filter(name__in=selected_interests)
 
-        # make sure categories exist
+       # if categories selected do not exist, make use of default set categories
         if not categories.exists():
-            return Response({
-                "status": "error",
-                "message": "No matching interests found."
-            }, status=status.HTTP_400_BAD_REQUEST)
 
-        # add selected interests to user_interests
-        user_interests.extend(categories.values_list('name', flat=True))
+            # return Response({
+            #     "status": "error",
+            #     "message": "No matching interests found."
+            # }, status=status.HTTP_400_BAD_REQUEST)
+
+            user_interests = settings.DEFAULT_PLACE_CATEGORIES
+        
+        else:
+            # add selected interests to user_interests
+            user_interests.extend(categories.values_list('name', flat=True))
 
     search_result_based_on_query_and_selected_interests = Feed().get_places_from_google_maps(
         city_name=city.name,

@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import User, PasswordResetCode, Category, UserSavedPlace
+from .models import User, PasswordResetCode, Category, UserSavedPlace, UserSearchHistory
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -12,7 +12,7 @@ from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from .utils import is_valid_email, authenticate_credentials, is_valid_phone_number
-from .serializers import UserSerializer, CategorySerializer
+from .serializers import UserSerializer, CategorySerializer, UserSearchHistorySerializer
 from django.utils.crypto import get_random_string
 from Places.models import City
 from Places.utils import Feed
@@ -823,11 +823,11 @@ def update_user_account(request):
     operation_description="Retrieve a list of interests/categories that can be explored.",
     responses={
         200: openapi.Response(
-            description="List of bookings",
+            description="List of interests/categories",
             schema=CategorySerializer(many=True)
         ),
     },
-    operation_summary="List Interests",
+    operation_summary="All Interests/Categories",
     tags=["User"]
 )
 @api_view(['GET'])
@@ -1231,3 +1231,89 @@ def get_user_saved_places(request, city_id):
         return Response(user_saved_places, status=status.HTTP_200_OK)
     
     return Response([], status=status.HTTP_200_OK)
+
+@swagger_auto_schema(
+    method='get',
+    operation_description="Retrieve the user's search history",
+    operation_summary="Get User Search History",
+    tags=['Search History'],
+    responses={
+        200: openapi.Response(
+            description="Search history retrieved successfully",
+            schema=UserSearchHistorySerializer(many=True),
+            examples={
+                'application/json': [
+                    {
+                        "search": "luxury cars",
+                        "date": "2024-01-15T10:30:00Z"
+                    },
+                    {
+                        "search": "budget vehicles",
+                        "date": "2024-01-14T09:15:00Z"
+                    }
+                ]
+            }
+        ),
+        401: openapi.Response(
+            description="Authentication required",
+            examples={
+                'application/json': {
+                    "detail": "Authentication credentials were not provided."
+                }
+            }
+        )
+    },
+    security=[{'Bearer': []}]
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_search_history(request):
+    """
+    Retrieve the last 10 search queries made by the authenticated user,
+    ordered by date (most recent first).
+    """
+    user_search_history = UserSearchHistory.objects.filter(user=request.user).order_by('-date')[:10]
+    serializer = UserSearchHistorySerializer(user_search_history, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='delete',
+    operation_description="Clear all search history for the authenticated user",
+    operation_summary="Clear User Search History",
+    tags=['Search History'],
+    responses={
+        200: openapi.Response(
+            description="Search history cleared successfully",
+            examples={
+                'application/json': {
+                    "status": "success",
+                    "message": "Search history cleared successfully"
+                }
+            }
+        ),
+        401: openapi.Response(
+            description="Authentication required",
+            examples={
+                'application/json': {
+                    "detail": "Authentication credentials were not provided."
+                }
+            }
+        )
+    },
+    security=[{'Bearer': []}],
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_user_search_history(request):
+    """
+    Delete all search history records for the authenticated user.
+    This action cannot be undone.
+    """
+    user_search_history = UserSearchHistory.objects.filter(user=request.user)
+    user_search_history.delete()
+
+    return Response({
+        "status": "success",
+        "message": "Search history cleared successfully"
+    }, status=status.HTTP_200_OK)

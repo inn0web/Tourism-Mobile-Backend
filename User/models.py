@@ -8,6 +8,7 @@ from django.core.mail import EmailMessage
 
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    icon = models.CharField(max_length=225, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -111,3 +112,9 @@ class UserSavedPlace(models.Model):
     city_name = models.CharField(max_length=255)
     place_id = models.CharField(max_length=255)
     date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+
+class UserSearchHistory(models.Model):
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='search_history')
+    search = models.CharField(max_length=300)
+    date = models.DateTimeField(auto_now_add=True)
