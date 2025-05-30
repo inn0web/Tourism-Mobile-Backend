@@ -6,6 +6,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
 from django.core.mail import EmailMessage
 
+ACCOUNT_VERIFICATION = "ACCOUNT VERIFICATION"
+PASSWORD_RESET = "PASSWORD RESET"
+
+VERIFICATION_CODE_TYPES = (
+    (ACCOUNT_VERIFICATION, ACCOUNT_VERIFICATION),
+    (PASSWORD_RESET, PASSWORD_RESET)
+)
 class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
     icon = models.CharField(max_length=225, null=True, blank=True)
@@ -49,7 +56,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     is_staff =  models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False, help_text="Indicates whether the user has all admin permissions. Defaults to False.")
-    is_active = models.BooleanField(default=True, help_text="Indicates whether the user account is active. Defaults to False and user needs to verify email on signup before it can be set to True.")
+    is_active = models.BooleanField(default=False, help_text="Indicates whether the user account is active. Defaults to False and user needs to verify email on signup before it can be set to True.")
     date_joined = models.DateTimeField(auto_now_add=True, help_text="The date and time when the user joined.")
     
     def __str__(self):
@@ -69,18 +76,29 @@ class User(AbstractBaseUser, PermissionsMixin):
             "refresh": str(refresh)
         }
     
-    def send_email(self, password_reset_code=None):
+    def send_email(self, verification_code, code_type):
 
-        if password_reset_code is not None:
+        if code_type == PASSWORD_RESET:
             
             email_message = EmailMessage(
                 "Your Password Reset Code",
-                f"Your password reset code is {password_reset_code}.",
+                f"Your password reset code is {verification_code}.",
                 settings.EMAIL_HOST_USER,
                 [self.email]
             )
-            email_message.fail_silently = True
-            email_message.send()
+        elif code_type == ACCOUNT_VERIFICATION:
+
+            email_message = EmailMessage(
+                "Activate your account",
+                f"Activate your account using the code: {verification_code}.",
+                settings.EMAIL_HOST_USER,
+                [self.email]
+            )
+
+        email_message.fail_silently = True
+        email_message.send()
+
+            
 
     def get_user_threads(self):
         from AiGuide.models import Thread
@@ -96,9 +114,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.first_name} {self.last_name}"
 
 
-class PasswordResetCode(models.Model):
+class VerificationCode(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     code = models.CharField(max_length=6)
+    code_type = models.CharField(max_length=225, choices=VERIFICATION_CODE_TYPES)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_valid(self):

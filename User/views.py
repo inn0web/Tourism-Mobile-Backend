@@ -1,6 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import User, PasswordResetCode, Category, UserSavedPlace, UserSearchHistory
+from .models import User, VerificationCode, Category, UserSavedPlace, UserSearchHistory, ACCOUNT_VERIFICATION, PASSWORD_RESET
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -19,7 +19,7 @@ from Places.utils import Feed
 
 @swagger_auto_schema(
     method='post',
-    operation_description="Register a new user by providing the required fields.",
+    operation_description="Register a new user by providing the required fields. After which user will be required to activate their account",
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -37,7 +37,7 @@ from Places.utils import Feed
             examples={
                 "application/json": {
                     "status": "success",
-                    "message": "Account created successfully",
+                    "message": "Activate account with code sent to your email",
                     "user": {
                         "email": "user@example.com",
                         "first_name": "John",
@@ -46,14 +46,11 @@ from Places.utils import Feed
                         "interests": [],
                         'language': "en",
                         "notification_enabled": False,
-                        "is_active": True,
+                        "is_active": False,
                         "date_joined": "2024-10-10T12:34:56Z",
                         "profile_image": "https://example.com/profile.jpg",
                     },
-                    "tokens": {
-                        "access": "jwt_access_token",
-                        "refresh": "jwt_refresh_token"
-                    }
+                    
                 }
             }
         ),
@@ -126,18 +123,264 @@ def register_user(request):
         new_user.phone=phone
 
     new_user.save() 
+
+    # send verification code to user to activate account
+    new_code = VerificationCode.objects.create(
+        user=new_user,
+        code=get_random_string(length=6, allowed_chars='0123456789'),
+        code_type=ACCOUNT_VERIFICATION
+    )
+
+    # send email to user
+    new_user.send_email(verification_code=new_code.code, code_type=ACCOUNT_VERIFICATION)
     
     # return response 
     user_serializer = UserSerializer(new_user)
 
     response = {
         "status": "success",
-        "message": "Account created successfully",
+        "message": "Activate account with code sent to your email",
         "user": user_serializer.data,
-        "tokens": new_user.auth_tokens()
     }
 
     return Response(response, status=status.HTTP_201_CREATED)
+
+@swagger_auto_schema(
+    method='post',
+    operation_description="Request a verification code to activate user account",
+    operation_summary="Request Account Activation Code",
+    tags=['Account Activation'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['email'],
+        properties={
+            'email': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_EMAIL,
+                description='User email address',
+                example='user@example.com'
+            )
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="Activation code sent successfully",
+            examples={
+                'application/json': {
+                    "status": "success",
+                    "message": "Activation code has been sent to your email"
+                }
+            }
+        ),
+        400: openapi.Response(
+            description="Bad request - Invalid email or user not found",
+            examples={
+                'application/json': 
+                    {
+                        "status": "error",
+                        "message": "Some error message"
+                    }
+                
+            }
+        )
+    }
+)
+@api_view(['POST'])
+def request_account_activation_verification_code(request):
+ 
+    email = request.data.get('email')
+
+    # verify data
+    if not (email and is_valid_email(email)):
+        return Response({
+            "status": "error",
+            "message": "A valid email must be provided"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user = User.objects.get(email=email)
+
+        new_code = VerificationCode.objects.create(
+            user=user,
+            code=get_random_string(length=6, allowed_chars='0123456789'),
+            code_type=ACCOUNT_VERIFICATION
+        )
+
+        user.send_email(verification_code=new_code.code, code_type=ACCOUNT_VERIFICATION)
+        
+        return Response({
+            "status": "success",
+            "message": "Activation code has been sent to your email"
+        }, status=status.HTTP_200_OK)
+    
+    except User.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "No user with this email exists"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description="Activate user account using verification code sent to email",
+    operation_summary="Activate User Account",
+    tags=['Account Activation'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['email', 'code'],
+        properties={
+            'email': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_EMAIL,
+                description='User email address',
+                example='user@example.com'
+            ),
+            'code': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='6-digit verification code sent to email',
+                example='123456',
+                min_length=6,
+                max_length=6
+            )
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="Account activated successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_STRING, example='success'),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, example='Account verified successfully'),
+                    'user': openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='User ID'),
+                            'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL, description='User email'),
+                            'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='User first name'),
+                            'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='User last name'),
+                            'phone': openapi.Schema(type=openapi.TYPE_STRING, description='User phone number'),
+                            'interests': openapi.Schema(
+                                type=openapi.TYPE_ARRAY,
+                                items=openapi.Schema(
+                                    type=openapi.TYPE_OBJECT,
+                                    properties={
+                                        'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                        'name': openapi.Schema(type=openapi.TYPE_STRING),
+                                        'description': openapi.Schema(type=openapi.TYPE_STRING)
+                                    }
+                                ),
+                                description='User interests/categories'
+                            ),
+                            'language': openapi.Schema(type=openapi.TYPE_STRING, description='User preferred language'),
+                            'notification_enabled': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Notification preference'),
+                            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Account activation status'),
+                            'date_joined': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Account creation date'),
+                            'profile_image': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI, description='User profile image URL')
+                        }
+                    ),
+                    'tokens': openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'access': openapi.Schema(type=openapi.TYPE_STRING, description='JWT access token'),
+                            'refresh': openapi.Schema(type=openapi.TYPE_STRING, description='JWT refresh token')
+                        }
+                    )
+                }
+            ),
+            examples={
+                'application/json': {
+                    "status": "success",
+                    "message": "Account verified successfully",
+                    "user": {
+                        "id": 1,
+                        "email": "user@example.com",
+                        "first_name": "John",
+                        "last_name": "Doe",
+                        "phone": "+1234567890",
+                        "interests": [],
+                        "language": "en",
+                        "notification_enabled": True,
+                        "is_active": False,
+                        "date_joined": "2024-01-15T10:30:00Z",
+                        "profile_image": "https://example.com/media/profile_images/user_1.jpg"
+                    },
+                    "tokens": {
+                        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+                    }
+                }
+            }
+        ),
+        400: openapi.Response(
+            description="Bad request - Various validation errors",
+            examples={
+                'application/json': 
+                    {
+                        "status": "error",
+                        "message": "Some error message"
+                    },
+                   
+            }
+        )
+    }
+)
+@api_view(['POST'])
+def activate_user_account_after_signup(request):
+ 
+    # grab payload
+    code = request.data.get('code')
+    email = request.data.get('email')
+
+    # verify data
+    if not (email and is_valid_email(email)) or not code:
+        return Response({
+            "status": "error",
+            "message": "A valid email and code must be provided"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # try to get verification code object and user object
+    try:
+        user = User.objects.get(email=email)
+        verification_code_object = VerificationCode.objects.get(
+            user=user, 
+            code=code,
+            code_type=ACCOUNT_VERIFICATION
+        )
+
+        # verify code 
+        if verification_code_object.is_valid():
+            user.is_active = True
+            user.save()
+
+            user_serializer = UserSerializer(user)
+
+            response = {
+                "status": "success",
+                "message": "Account verified successfully",
+                "user": user_serializer.data,
+                "tokens": user.auth_tokens()
+            }
+
+            return Response(response, status=status.HTTP_200_OK)
+        
+        else:
+            return Response({
+                "status": "error",
+                "message": "Verification code provided has expired"
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    except User.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "No user with this email exists"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    except VerificationCode.DoesNotExist:
+        return Response({
+            "status": "error",
+            "message": "Invalid verification code provided"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginUser(TokenObtainPairView):
     serializer_class = TokenObtainPairSerializer
@@ -424,13 +667,17 @@ def request_reset_code(request):
         user = User.objects.get(email=email)
 
         # delete old codes
-        PasswordResetCode.objects.filter(user=user).delete()
+        VerificationCode.objects.filter(user=user).delete()
 
         code = get_random_string(length=6, allowed_chars='0123456789')
-        PasswordResetCode.objects.create(user=user, code=code)
+        VerificationCode.objects.create(
+            user=user, 
+            code=code, 
+            code_type=PASSWORD_RESET
+        )
 
         # send password reset code to user's email
-        user.send_email(password_reset_code=code)
+        user.send_email(password_reset_code=code, code_type=PASSWORD_RESET)
 
         return Response({
             "status": "success",
@@ -503,7 +750,7 @@ def verify_reset_code(request):
 
     try:
         user = User.objects.get(email=email)
-        reset_code = PasswordResetCode.objects.get(user=user, code=code)
+        reset_code = VerificationCode.objects.get(user=user, code=code)
 
         if reset_code.is_valid():
             return Response({
@@ -522,7 +769,7 @@ def verify_reset_code(request):
             "message": "User with this email does not exist."
         }, status=status.HTTP_404_NOT_FOUND)
     
-    except PasswordResetCode.DoesNotExist:
+    except VerificationCode.DoesNotExist:
         return Response({
             "status": "error",
             "message": "Invalid reset code."
@@ -592,7 +839,7 @@ def reset_password(request):
 
     try:
         user = User.objects.get(email=email)
-        reset_code = PasswordResetCode.objects.get(code=code, user=user)
+        reset_code = VerificationCode.objects.get(code=code, user=user)
 
         # validate the passwords and reset code
 
@@ -601,6 +848,12 @@ def reset_password(request):
                 "status": "error",
                 "message": "Reset code has expired."
             }, status=status.HTTP_403_FORBIDDEN)
+        
+        if not reset_code.code_type == "PASSWORD RESET":
+            return Response({
+                "status": "error",
+                "message": "Invalid code entered"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         if password != confirm_password:
             return Response({
@@ -633,7 +886,7 @@ def reset_password(request):
             "message": "No user with that email address exists"
         }, status=status.HTTP_404_NOT_FOUND)
     
-    except PasswordResetCode.DoesNotExist:
+    except VerificationCode.DoesNotExist:
         return Response({
             "status": "error",
             "message": "Reset code provided does not exist"

@@ -8,13 +8,17 @@ from .views import (
     update_user_interests, save_place,
     delete_saved_place, get_user_saved_places,
     get_user_search_history, delete_user_search_history,
-    delete_a_single_search_history,
+    delete_a_single_search_history, activate_user_account_after_signup,
+    request_account_activation_verification_code, 
 )
 urlpatterns = [
     path('register/', register_user),
     path('token/', LoginUser.as_view()),
     path('token/refresh/', MyTokenRefreshView.as_view()),
     path('logout/', logout_user),
+
+    path('request-account-activation-code/', request_account_activation_verification_code),  
+    path('activate-account/', activate_user_account_after_signup),  
 
     path('get-user-info/', get_user_info),
 
