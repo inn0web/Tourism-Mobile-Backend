@@ -11,7 +11,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from .utils import is_valid_email, authenticate_credentials, is_valid_phone_number
+from .utils import is_valid_email, authenticate_credentials, is_valid_phone_number, send_activation_email
 from .serializers import UserSerializer, CategorySerializer, UserSearchHistorySerializer
 from django.utils.crypto import get_random_string
 from Places.models import City
@@ -38,19 +38,6 @@ from Places.utils import Feed
                 "application/json": {
                     "status": "success",
                     "message": "Activate account with code sent to your email",
-                    "user": {
-                        "email": "user@example.com",
-                        "first_name": "John",
-                        "last_name": "Doe",
-                        "phone": "1234567890",
-                        "interests": [],
-                        'language': "en",
-                        "notification_enabled": False,
-                        "is_active": False,
-                        "date_joined": "2024-10-10T12:34:56Z",
-                        "profile_image": "https://example.com/profile.jpg",
-                    },
-                    
                 }
             }
         ),
@@ -108,39 +95,29 @@ def register_user(request):
             "status": "error",
             "message": "Password must be at least 5 characters long"
         }, status=status.HTTP_400_BAD_REQUEST)
+
+    verification_code = get_random_string(length=6, allowed_chars='0123456789')
     
-    # create user 
+    # save user data in session
+    request.session["user_registration_data"] = {
+        email: {
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone": phone,
+            "password": password,
+            "code": verification_code
+        }
+    }
 
-    new_user = User(
-        username=email,
-        email=email,
-        first_name=first_name,
-        last_name=last_name,
-    )
-    new_user.set_password(password)
-   
-    if phone:
-        new_user.phone=phone
-
-    new_user.save() 
-
-    # send verification code to user to activate account
-    new_code = VerificationCode.objects.create(
-        user=new_user,
-        code=get_random_string(length=6, allowed_chars='0123456789'),
-        code_type=ACCOUNT_VERIFICATION
-    )
+    print(request.session["user_registration_data"])
 
     # send email to user
-    new_user.send_email(verification_code=new_code.code, code_type=ACCOUNT_VERIFICATION)
-    
-    # return response 
-    user_serializer = UserSerializer(new_user)
+    send_activation_email(verification_code, email)
 
     response = {
         "status": "success",
         "message": "Activate account with code sent to your email",
-        "user": user_serializer.data,
     }
 
     return Response(response, status=status.HTTP_201_CREATED)
@@ -229,12 +206,6 @@ def request_account_activation_verification_code(request):
         type=openapi.TYPE_OBJECT,
         required=['email', 'code'],
         properties={
-            'email': openapi.Schema(
-                type=openapi.TYPE_STRING,
-                format=openapi.FORMAT_EMAIL,
-                description='User email address',
-                example='user@example.com'
-            ),
             'code': openapi.Schema(
                 type=openapi.TYPE_STRING,
                 description='6-digit verification code sent to email',
@@ -291,7 +262,7 @@ def request_account_activation_verification_code(request):
             examples={
                 'application/json': {
                     "status": "success",
-                    "message": "Account verified successfully",
+                    "message": "Account activated successfully",
                     "user": {
                         "id": 1,
                         "email": "user@example.com",
@@ -320,63 +291,71 @@ def request_account_activation_verification_code(request):
                         "status": "error",
                         "message": "Some error message"
                     },
-                   
             }
         )
     }
 )
 @api_view(['POST'])
-def activate_user_account_after_signup(request):
- 
-    # grab payload
-    code = request.data.get('code')
+def save_and_activate_user_account_after_signup(request):
+
+    # grab payload containing code
+    user_entered_code = request.data.get('code')
     email = request.data.get('email')
 
-    # verify data
-    if not (email and is_valid_email(email)) or not code:
+    if not user_entered_code and email:
         return Response({
             "status": "error",
-            "message": "A valid email and code must be provided"
+            "message": "Email and verification code are required"
         }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # try to get verification code object and user object
-    try:
-        user = User.objects.get(email=email)
-        verification_code_object = VerificationCode.objects.get(
-            user=user, 
-            code=code,
-            code_type=ACCOUNT_VERIFICATION
-        )
 
-        # verify code 
-        if verification_code_object.is_valid():
-            user.is_active = True
-            user.save()
 
-            user_serializer = UserSerializer(user)
+    # grab user registration data from session
+    registration_data = request.session.get("user_registration_data")
 
-            response = {
-                "status": "success",
-                "message": "Account verified successfully",
-                "user": user_serializer.data,
-                "tokens": user.auth_tokens()
-            }
+    print(registration_data)
 
-            return Response(response, status=status.HTTP_200_OK)
-        
-        else:
-            return Response({
-                "status": "error",
-                "message": "Verification code provided has expired"
-            }, status=status.HTTP_400_BAD_REQUEST)
-    
-    except User.DoesNotExist:
+    # check if user registration data exists in session
+    if email not in registration_data:
         return Response({
             "status": "error",
-            "message": "No user with this email exists"
+            "message": "No user registration data found in session. Please register again."
         }, status=status.HTTP_400_BAD_REQUEST)
+
+    registration_data = registration_data[email]
     
-    except VerificationCode.DoesNotExist:
+    email = registration_data.get('email')
+    code = registration_data.get('code')
+    first_name = registration_data.get('first_name')
+    last_name = registration_data.get('last_name')
+    phone = registration_data.get('phone')
+    password = registration_data.get('password')
+    
+    if code == user_entered_code:
+
+    # create new user object
+        user = User.objects.create_user(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            phone=phone,
+            password=password,
+            is_active=True
+        )   
+        user_serializer = UserSerializer(user)
+
+        response = {
+            "status": "success",
+            "message": "Account activated successfully",
+            "user": user_serializer.data,
+            "tokens": user.auth_tokens()
+        }
+
+        # clear session data after use
+        request.session.pop("user_registration_data", None)  
+
+        return Response(response, status=status.HTTP_200_OK)
+
+    else:
         return Response({
             "status": "error",
             "message": "Invalid verification code provided"
@@ -448,7 +427,7 @@ class LoginUser(TokenObtainPairView):
                 "status": "error",
                 "message": "Invalid credentials"
                 }, 
-            status=status.HTTP_401_UNAUTHORIZED)
+            status=status.HTTP_400_BAD_REQUEST)
 
         if not user.is_active:
             return Response({

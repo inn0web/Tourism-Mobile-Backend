@@ -1,6 +1,7 @@
 import re
 from .models import User
-
+from django.core.mail import EmailMessage
+from django.conf import settings
 
 def is_valid_email(email):
 
@@ -29,3 +30,15 @@ def authenticate_credentials(email, password):
         return None
     except User.DoesNotExist:
         return None
+    
+def send_activation_email(verification_code, email):
+
+    email_message = EmailMessage(
+        "Activate your account",
+        f"Activate your account using the code: {verification_code}.",
+        settings.EMAIL_HOST_USER,
+        [email]
+    )
+
+    email_message.fail_silently = True
+    email_message.send()

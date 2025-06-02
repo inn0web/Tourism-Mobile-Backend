@@ -8,7 +8,7 @@ from .views import (
     update_user_interests, save_place,
     delete_saved_place, get_user_saved_places,
     get_user_search_history, delete_user_search_history,
-    delete_a_single_search_history, activate_user_account_after_signup,
+    delete_a_single_search_history, save_and_activate_user_account_after_signup,
     request_account_activation_verification_code, 
 )
 urlpatterns = [
@@ -18,7 +18,7 @@ urlpatterns = [
     path('logout/', logout_user),
 
     path('request-account-activation-code/', request_account_activation_verification_code),  
-    path('activate-account/', activate_user_account_after_signup),  
+    path('activate-account/', save_and_activate_user_account_after_signup),  
 
     path('get-user-info/', get_user_info),
 
