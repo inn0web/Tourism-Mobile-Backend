@@ -128,6 +128,7 @@ class VerificationCode(models.Model):
     
 class UserSavedPlace(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_places')
+    tag = models.CharField(max_length=100, null=True, blank=True)
     city_name = models.CharField(max_length=255)
     place_id = models.CharField(max_length=255)
     date = models.DateTimeField(auto_now_add=True, null=True, blank=True)

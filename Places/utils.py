@@ -107,7 +107,7 @@ class Feed:
 
         return user_feed
 
-    def get_place_details(self, place_id, is_ai_request=False, city_name=None) -> dict:
+    def get_place_details(self, place_id, tag, is_ai_request=False, is_saved_place_request=False, city_name=None) -> dict:
         """
         Fetches detailed information about a place using its place_id.
         """
@@ -117,30 +117,36 @@ class Feed:
 
         request_data = request_place_details.json()
 
-        # print(json.dumps(request_data, indent=4))
-
-        # extract required fields from response
+        # extract base required data
         place_data = {
             "place_id": request_data["id"],
             "name": request_data["displayName"]["text"],
             "address": request_data["formattedAddress"],
-            "phone": request_data.get("internationalPhoneNumber"),
             "rating": request_data.get("rating", ""),
-            "photos": [
-                {
-                    "url": f"{self.google_places_base_url}/{photo['name']}/media?key={self.api_key}&maxHeightPx=400&maxWidthPx=400",
-                } for photo in request_data["photos"]
-            ],
-            "opening_hours": request_data.get("currentOpeningHours"),
-            "map_directions": request_data["googleMapsLinks"]["directionsUri"],
+            "tag": tag,
         }
-
-        # https://places.googleapis.com/v1/NAME/media?key=API_KEY&PARAMETERS
 
         if city_name is not None:
             place_data["city_name"] = city_name
 
-        if not is_ai_request and request_data.get("reviews"):
+        # add photos and other details if not a saved place request
+        if not is_saved_place_request:
+            place_data["photos"] = [
+                {
+                    "url": f"{self.google_places_base_url}/{photo['name']}/media?key={self.api_key}&maxHeightPx=400&maxWidthPx=400",
+                } for photo in request_data["photos"]
+            ]
+            place_data["opening_hours"] = request_data.get("currentOpeningHours")
+            place_data["map_directions"] = request_data["googleMapsLinks"]["directionsUri"]
+            place_data["phone"] = request_data.get("internationalPhoneNumber")
+
+        else:
+            place_data["image"] = f"{self.google_places_base_url}/{request_data['photos'][0]['name']}/media?key={self.api_key}&maxHeightPx=400&maxWidthPx=400",
+
+        # https://places.googleapis.com/v1/NAME/media?key=API_KEY&PARAMETERS
+
+        # if this is not an AI request, add reviews and write a review URL
+        if not is_ai_request and request_data.get("reviews") and not is_saved_place_request:
             place_data["reviews"] = [
                 {
                     "author": review["authorAttribution"]["displayName"],

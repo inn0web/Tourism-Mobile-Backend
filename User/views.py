@@ -110,8 +110,6 @@ def register_user(request):
         }
     }
 
-    print(request.session["user_registration_data"])
-
     # send email to user
     send_activation_email(verification_code, email)
 
@@ -120,7 +118,7 @@ def register_user(request):
         "message": "Activate account with code sent to your email",
     }
 
-    return Response(response, status=status.HTTP_201_CREATED)
+    return Response(response, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
     method='post',
@@ -157,7 +155,6 @@ def register_user(request):
                         "status": "error",
                         "message": "Some error message"
                     }
-                
             }
         )
     }
@@ -174,26 +171,30 @@ def request_account_activation_verification_code(request):
             "message": "A valid email must be provided"
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    try:
-        user = User.objects.get(email=email)
+    # grab user registration data from session
+    registration_data = request.session.get("user_registration_data", None)
 
-        new_code = VerificationCode.objects.create(
-            user=user,
-            code=get_random_string(length=6, allowed_chars='0123456789'),
-            code_type=ACCOUNT_VERIFICATION
-        )
+    # check if user registration data exists in session
+    if registration_data and email in registration_data:
 
-        user.send_email(verification_code=new_code.code, code_type=ACCOUNT_VERIFICATION)
-        
-        return Response({
+        code = get_random_string(length=6, allowed_chars='0123456789')
+
+        # save new code in session
+        request.session["user_registration_data"][email]['code'] = code
+
+        # send email to user
+        send_activation_email(code, email)
+
+        response = {
             "status": "success",
-            "message": "Activation code has been sent to your email"
-        }, status=status.HTTP_200_OK)
-    
-    except User.DoesNotExist:
+            "message": "Activate account with code sent to your email",
+        }
+        return Response(response, status=status.HTTP_200_OK)
+
+    else:
         return Response({
             "status": "error",
-            "message": "No user with this email exists"
+            "message": "No user registration data found in session. Please register again."
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -310,12 +311,10 @@ def save_and_activate_user_account_after_signup(request):
 
 
     # grab user registration data from session
-    registration_data = request.session.get("user_registration_data")
-
-    print(registration_data)
+    registration_data = request.session.get("user_registration_data", None)
 
     # check if user registration data exists in session
-    if email not in registration_data:
+    if not registration_data or email not in registration_data:
         return Response({
             "status": "error",
             "message": "No user registration data found in session. Please register again."
@@ -1205,11 +1204,15 @@ def update_user_interests(request):
     ],
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
-        required=['place_id'],
+        required=['place_id', 'tag'],
         properties={
             'place_id': openapi.Schema(
                 type=openapi.TYPE_STRING,
                 description="The unique identifier of the place (Google Place ID)"
+            ),
+            'tag': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="The tag for this place (eg restaurant, hotel, attraction, etc.)",
             )
         }
     ),
@@ -1260,12 +1263,20 @@ def save_place(request, city_id):
         }, status=status.HTTP_404_NOT_FOUND)
 
     place_id = request.data.get('place_id')
+    tag = request.data.get('tag')
+
+    if not place_id or not tag:
+        return Response({
+            "status": "error",
+            "message": "Place ID and tag are required"
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     user = request.user
     user_saved_place, created = UserSavedPlace.objects.get_or_create(
         user=user,
         city_name=city.name,
-        place_id=place_id
+        place_id=place_id,
+        tag=tag
     )
     if created:
         return Response({
@@ -1455,7 +1466,9 @@ def get_user_saved_places(request, city_id):
         for saved_place in saved_places:
             get_place_by_place_id = Feed().get_place_details(
                 place_id=saved_place.place_id,
-                city_name = city.name
+                city_name = city.name,
+                is_saved_place_request=True,
+                tag=saved_place.tag,
             )
             if get_place_by_place_id:
                 user_saved_places.append(get_place_by_place_id)

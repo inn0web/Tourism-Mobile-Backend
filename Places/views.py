@@ -161,7 +161,8 @@ def get_user_feed(request, city_id):
     operation_summary="Get Place Details",
     operation_description="Returns detailed information about a place using its Google Maps Place ID, including address, rating, reviews, photos, and Google Maps links.",
     manual_parameters=[
-        openapi.Parameter('place_id', openapi.IN_PATH, description="The Google Place ID", type=openapi.TYPE_STRING)
+        openapi.Parameter('place_id', openapi.IN_PATH, description="The Google Place ID", type=openapi.TYPE_STRING),
+        openapi.Parameter('tag', openapi.IN_PATH, description="The tag of the place eg Restaurant", type=openapi.TYPE_STRING)
     ],
     responses={
         200: openapi.Schema(
@@ -258,14 +259,27 @@ def get_user_feed(request, city_id):
                 'write_a_review_url': openapi.Schema(type=openapi.TYPE_STRING, format='uri'),
             }
         ),
-        401: 'Unauthorized'
+        401: 'Unauthorized',
+        400: openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "status": openapi.Schema(type=openapi.TYPE_STRING, example="error"),
+                "message": openapi.Schema(type=openapi.TYPE_STRING, example="Place ID and tag are required.")
+            }
+        ),
     }
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def get_place_details(request, place_id):
+def get_place_details(request, place_id, tag):
 
-    place_detail = Feed().get_place_details(place_id=place_id)
+    if not place_id or not tag:
+        return Response({
+            "status": "error",
+            "message": "Place ID and tag are required."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    place_detail = Feed().get_place_details(place_id=place_id, tag=tag)
     return Response(place_detail, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
