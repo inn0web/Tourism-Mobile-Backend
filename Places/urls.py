@@ -7,6 +7,6 @@ from .views import (
 urlpatterns = [
     path('cities/', all_cities),
     path('feed/<int:city_id>/', get_user_feed),
-    path('place/<str:place_id>/', get_place_details),
+    path('place/<str:place_id>/<str:tag>/', get_place_details),
     path('search/<int:city_id>/', search_for_places),
 ]
