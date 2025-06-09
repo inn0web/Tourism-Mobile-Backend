@@ -141,8 +141,9 @@ class Feed:
             place_data["phone"] = request_data.get("internationalPhoneNumber")
 
         else:
-            place_data["image"] = f"{self.google_places_base_url}/{request_data['photos'][0]['name']}/media?key={self.api_key}&maxHeightPx=400&maxWidthPx=400",
-
+            place_data["image"] = f"{self.google_places_base_url}/{request_data['photos'][0]['name']}/media?key={self.api_key}&maxHeightPx=400&maxWidthPx=400"
+        
+        
         # https://places.googleapis.com/v1/NAME/media?key=API_KEY&PARAMETERS
 
         # if this is not an AI request, add reviews and write a review URL
