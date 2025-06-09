@@ -270,7 +270,7 @@ def get_user_feed(request, city_id):
     }
 )
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def get_place_details(request, place_id, tag):
 
     if not place_id or not tag:
