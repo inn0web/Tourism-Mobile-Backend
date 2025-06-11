@@ -413,7 +413,7 @@ def search_for_places(request, city_id):
             #     "message": "No matching interests found."
             # }, status=status.HTTP_400_BAD_REQUEST)
 
-            user_interests = settings.DEFAULT_PLACE_CATEGORIES
+            user_interests.extend(settings.DEFAULT_PLACE_CATEGORIES)
         
         else:
             # add selected interests to user_interests

@@ -49,7 +49,7 @@ class Feed:
 
         return place_details
 
-    def get_places_from_google_maps(self, city_name, city_location, user_interests):
+    def get_places_from_google_maps(self, city_name, city_location, user_interests, is_search_request=False):
         
         # Dictionary to store results
         user_feed = {
@@ -102,12 +102,19 @@ class Feed:
 
         # shuffle the lists to randomize the order
         
-        random.shuffle(user_feed["recommended"])
-        random.shuffle(user_feed["popular"])
+        if not is_search_request:
+            random.shuffle(user_feed["recommended"])
+            random.shuffle(user_feed["popular"])
 
         return user_feed
 
-    def get_place_details(self, place_id, tag, is_ai_request=False, is_saved_place_request=False, city_name=None) -> dict:
+    def get_place_details(
+            self, 
+            place_id, 
+            tag, is_ai_request=False, 
+            is_saved_place_request=False, 
+            city_name=None
+        ) -> dict:
         """
         Fetches detailed information about a place using its place_id.
         """
