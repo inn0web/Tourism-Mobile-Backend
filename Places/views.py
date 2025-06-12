@@ -110,7 +110,7 @@ def all_cities(request):
     tags=['Places']
 )
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 def get_user_feed(request, city_id):
 
     try:
@@ -123,7 +123,7 @@ def get_user_feed(request, city_id):
     
     categories = request.query_params.get('categories')
     
-    # get places by selected categories
+    # if user selected categories 
     if categories:
         try:
             interests = categories.split(',')
@@ -133,18 +133,20 @@ def get_user_feed(request, city_id):
                 "message": "Category must be passed as parameter in the format: caregory1,category2,category3"
             }, status=status.HTTP_400_BAD_REQUEST)
 
-    # get places via user interests
+    # if user is trying to get feed 
     else:
         user = request.user
-        interests = user.interests.values_list('name', flat=True)
+        
+        # if user is logged in then get their categories
+        if user.is_authenticated:
+            interests = user.interests.values_list('name', flat=True)
 
-        if not interests:
-            # return Response({
-            #     "status": "error",
-            #     "message": "User has no interests selected"
-            # }, status=status.HTTP_400_BAD_REQUEST)
-
-            # use default interests from settings
+            # if user does not have interests selected, return the default interests from settings
+            if not interests:
+                interests = settings.DEFAULT_PLACE_CATEGORIES
+        
+        # if user is not logged in, return the default interests from settings
+        else:
             interests = settings.DEFAULT_PLACE_CATEGORIES
         
     get_user_feed = Feed().get_places_from_google_maps(
