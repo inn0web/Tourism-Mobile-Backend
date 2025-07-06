@@ -244,11 +244,23 @@ JAZZMIN_SETTINGS = {
 }
 
 REST_FRAMEWORK = {
-    
-    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ],
+
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'User.throttles.BurstRateThrottle',
+        'User.throttles.SustainedRateThrottle',
+    ],
+
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',            # prevent abuse but allow login/signup attempts
+        'burst': '60/minute',          # handle short-term spikes (scrolling, searching)
+        'sustained': '1000/day',       # enough for regular user activity without abuse
+    }
 }
+
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=3), # duration for which access token is valid

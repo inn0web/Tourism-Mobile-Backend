@@ -9,7 +9,7 @@ from .views import (
     delete_saved_place, get_user_saved_places,
     get_user_search_history, delete_user_search_history,
     delete_a_single_search_history, save_and_activate_user_account_after_signup,
-    request_account_activation_verification_code, 
+    request_account_activation_verification_code, test_endpoint
 )
 urlpatterns = [
     path('register/', register_user),
@@ -38,4 +38,6 @@ urlpatterns = [
     path('search-history/', get_user_search_history),
     path('delete-search-history/', delete_user_search_history),
     path('delete-search-history/<int:search_id>/', delete_a_single_search_history),
+
+    path('test-endpoint/', test_endpoint),
 ]

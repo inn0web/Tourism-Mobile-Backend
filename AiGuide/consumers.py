@@ -118,7 +118,7 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
 
         # get payload from client(frontend)
         payload = json.loads(text_data)
-        message = payload['message']
+        message = payload.get('message')
 
         # If thread_id is not provided, create a new thread
         if (len(message) > 0) and (self.thread_id == None):
