@@ -108,7 +108,7 @@ class Feed:
 
         return user_feed
 
-    def get_place_details(self, place_id: str, tag: str, is_ai_request=False, is_saved_place_request=False, city_name=None) -> dict:
+    def get_place_details(self, place_id: str, tag=None, is_ai_request=False, is_saved_place_request=False, city_name=None) -> dict:
         """
         Fetches detailed information about a place using its place_id.
         """
@@ -124,8 +124,10 @@ class Feed:
             "name": request_data["displayName"]["text"],
             "address": request_data["formattedAddress"],
             "rating": request_data.get("rating", ""),
-            "tag": tag,
         }
+
+        if tag is not None:
+            place_data["tag"] = tag
 
         if city_name is not None:
             place_data["city_name"] = city_name

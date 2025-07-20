@@ -22,16 +22,27 @@ class WebSocketMockAPIView(APIView):
         **WebSocket Endpoint Description:**
 
         Connect via WebSocket to:
-        
-        - `ws://<host>/ws/ai-guide/<city_name>/<user_id>/`  
+
+        - `ws://203.161.57.186:8003/ai-guide/<city_name>/<user_id>/`  
         ➤ Used to start a **new chat thread** (create a new conversation).
 
-        - `ws://<host>/ws/ai-guide/<city_name>/<user_id>/<thread_id>/`  
+        - `ws://203.161.57.186:8003/ai-guide/<city_name>/<user_id>/<thread_id>/`  
         ➤ Used to **resume an existing chat thread** by providing the previously saved `thread_id`.
 
-        The server will return a list of recommended places, each represented as a JSON object containing a message and an array of photo URLs.
+        ---
+        **Message Format (Client to Server):**
 
-        **Message format returned via WebSocket:**
+        Once connected, the client **must send a message** in the following JSON format:
+        ```json
+        {
+            "message": "I want to go touring, specifically places like old buildings or castles or places of the sort"
+        }
+        ```
+
+        ---
+        **Response Format (Server to Client):**
+
+        The server will return a list of recommended places, each represented as a JSON object containing a message and an array of photo URLs:
         ```json
         [
             {
@@ -43,8 +54,18 @@ class WebSocketMockAPIView(APIView):
             }
         ]
         ```
-        
-        This mock endpoint is for documentation purposes only and does not provide live data.
+
+        ---
+        **Test the WebSocket Endpoint:**
+
+        You can test this endpoint live using our demo tester at:  
+        🔗 [http://203.161.57.186:8000/api/v1/ai/ai-test/](http://203.161.57.186:8000/api/v1/ai/ai-test/)
+
+        ---
+        **Source Code for Socket Test (HTML + JS):**
+
+        View the implementation code used in the WebSocket tester:  
+        📄 [ai_guide_test.html on GitHub](https://github.com/inn0web/Tourism-Mobile-Backend/blob/main/templates/ai_guide_test.html)
         """,
         responses={200: WebSocketPlaceMessageSerializer(many=True)}
     )
