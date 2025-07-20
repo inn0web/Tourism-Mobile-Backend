@@ -1624,8 +1624,3 @@ def delete_a_single_search_history(request, search_id):
             "status": "error",
             "message": "Search history not found"
         }, status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['GET'])
-def test_endpoint(request):
-
-    return Response({"message": "Hello world"})

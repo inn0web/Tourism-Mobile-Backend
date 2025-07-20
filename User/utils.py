@@ -3,7 +3,7 @@ from .models import User
 from django.core.mail import EmailMessage
 from django.conf import settings
 
-def is_valid_email(email):
+def is_valid_email(email: str) -> bool:
 
     if 'do-not-respond' in email:
         return False
@@ -12,7 +12,7 @@ def is_valid_email(email):
     pattern = r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
     return bool(re.match(pattern, email))
 
-def is_valid_phone_number(phone):
+def is_valid_phone_number(phone: str) -> bool:
     # Remove all spaces from the input
     phone = phone.replace(" ", "")
     
@@ -21,7 +21,7 @@ def is_valid_phone_number(phone):
     return bool(re.match(pattern, phone))
 
 
-def authenticate_credentials(email, password):
+def authenticate_credentials(email: str, password: str) -> User | None:
 
     try:
         user = User.objects.get(email=email)
@@ -31,7 +31,7 @@ def authenticate_credentials(email, password):
     except User.DoesNotExist:
         return None
     
-def send_activation_email(verification_code, email):
+def send_activation_email(verification_code: str, email: str):
 
     email_message = EmailMessage(
         "Activate your account",

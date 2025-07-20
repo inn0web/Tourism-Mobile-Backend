@@ -6,6 +6,8 @@ search_result.json
 request_detail_full.json
 .vscode
 .rmv
-_requests
+sample_requests
 __pycache__
 __pycache__/
+creds.txt
+*.pyc

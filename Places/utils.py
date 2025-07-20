@@ -11,7 +11,7 @@ class Feed:
 
         self.google_places_base_url = 'https://places.googleapis.com/v1'
 
-    def get_places_from_google_maps_for_ai_request(self, city_name, city_location, extracted_search_interests_from_message):
+    def get_places_from_google_maps_for_ai_request(self, city_name: str, city_location: tuple, extracted_search_interests_from_message: list) -> list:
 
         place_ids = []
         place_details = []
@@ -49,7 +49,7 @@ class Feed:
 
         return place_details
 
-    def get_places_from_google_maps(self, city_name, city_location, user_interests, is_search_request=False):
+    def get_places_from_google_maps(self, city_name: str, city_location: tuple, user_interests: list, is_search_request=False):
         
         # Dictionary to store results
         user_feed = {
@@ -108,13 +108,7 @@ class Feed:
 
         return user_feed
 
-    def get_place_details(
-            self, 
-            place_id, 
-            tag, is_ai_request=False, 
-            is_saved_place_request=False, 
-            city_name=None
-        ) -> dict:
+    def get_place_details(self, place_id: str, tag: str, is_ai_request=False, is_saved_place_request=False, city_name=None) -> dict:
         """
         Fetches detailed information about a place using its place_id.
         """
