@@ -15,7 +15,10 @@
 
   <script>
     const userId = 1;  // Replace with actual user ID
-    const socket = new WebSocket(`ws://203.161.57.186:8000/ai-guide/Pogradec/${userId}/thread_7GMrEhPO5y5grP4TXpRXlKEW/`);
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const host = window.location.host; // Includes domain and port if any
+    const socket = new WebSocket(`${protocol}://${host}/ai-guide/Pogradec/${userId}/`);
+
 
     socket.onopen = function () {
       log('WebSocket connection opened');
