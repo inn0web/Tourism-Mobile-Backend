@@ -92,6 +92,8 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
             input=instruction
         )
 
+        print(f"Extracted keywords: {response.output_text.strip()}\n\n")
+
         return response.output_text.strip('"').split(',')
 
     async def create_new_open_ai_thread(self, message):
@@ -129,7 +131,7 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
         places = await self.get_places_based_on_user_message(message)
         places = json.dumps(places, indent=4)
         
-        # create a new message to ve sent to openai
+        # create a new message to be sent to openai
         self.client.beta.threads.messages.create(
             thread_id=self.thread.id,
             role="user",
@@ -152,6 +154,13 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
             )
 
             ai_response = ai_message.data[0].content[0].text.value
+
+            '''
+            
+            Write a new flow to only give the ai the object and tell it 
+            to generate custom messages as well as return place id's from
+            a list which will contain all places gotten from the google places api
+            '''
 
             # parse the AI response to a JSON object if it is a string
             # This is to ensure that the response is in a valid JSON format

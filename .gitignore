@@ -11,4 +11,4 @@ __pycache__
 __pycache__/
 creds.txt
 *.pyc
-config
+extras
