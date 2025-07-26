@@ -17,8 +17,8 @@
     const userId = 1;  // Replace with actual user ID
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const host = window.location.host; // Includes domain and port if any
-  const socket = new WebSocket(`${protocol}://${host}/ai-guide/Pogradec/${userId}/`);
-  //  const socket = new WebSocket(`ws://203.161.57.186:8003/ai-guide/Pogradec/1/`);
+  // const socket = new WebSocket(`${protocol}://${host}/ai-guide/Pogradec/${userId}/`);
+  const socket = new WebSocket(`ws://203.161.57.186:8003/ai-guide/Pogradec/1/`);
 
 
     socket.onopen = function () {
