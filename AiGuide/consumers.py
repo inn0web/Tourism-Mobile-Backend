@@ -129,13 +129,12 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
             await self.set_current_city_name_and_location()
         
         places = await self.get_places_based_on_user_message(message)
-        places = json.dumps(places, indent=4)
         
         # create a new message to be sent to openai
         self.client.beta.threads.messages.create(
             thread_id=self.thread.id,
             role="user",
-            content=places
+            content=json.dumps(places, indent=4)
         )
 
         # run the assistant and poll the responses from ai
@@ -155,6 +154,8 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
 
             ai_response = ai_message.data[0].content[0].text.value
 
+            print(f"\n\nAI response: {ai_response}\n\n")
+
             '''
             
             Write a new flow to only give the ai the object and tell it 
@@ -168,6 +169,7 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
                 try:
                     # Attempt to parse the string as JSON
                     ai_response = json.loads(ai_response)
+                    ai_response = await self.construct_ai_response(places, ai_response)
                 except json.JSONDecodeError:
                     print("Error: Invalid AI response format.")
                     return
@@ -196,6 +198,24 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
 
             # call event to send message to client
             await self.channel_layer.group_send(self.room_name, event)
+
+    async def construct_ai_response(self, places, response_data):
+
+        
+
+        constructed_response = []
+        for data in response_data:
+
+            place_id_in_places_list = data.get('id_in_list')
+
+            constructed_response.append({
+                "message": data.get("message", ""),
+                "photos": places[place_id_in_places_list].get("photos", []),
+            })
+
+        print(f"\n\nConstructed AI response: {constructed_response}\n\n")
+
+        return constructed_response
 
     async def send_message(self, event):
 
