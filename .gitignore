@@ -12,3 +12,4 @@ __pycache__/
 creds.txt
 *.pyc
 extras
+db.sqlite3
