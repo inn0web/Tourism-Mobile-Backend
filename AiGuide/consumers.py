@@ -92,8 +92,6 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
             input=instruction
         )
 
-        print(f"Extracted keywords: {response.output_text.strip()}\n\n")
-
         return response.output_text.strip('"').split(',')
 
     async def create_new_open_ai_thread(self, message):
@@ -154,15 +152,6 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
 
             ai_response = ai_message.data[0].content[0].text.value
 
-            print(f"\n\nAI response: {ai_response}\n\n")
-
-            '''
-            
-            Write a new flow to only give the ai the object and tell it 
-            to generate custom messages as well as return place id's from
-            a list which will contain all places gotten from the google places api
-            '''
-
             # parse the AI response to a JSON object if it is a string
             # This is to ensure that the response is in a valid JSON format
             if isinstance(ai_response, str):
@@ -200,9 +189,7 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_send(self.room_name, event)
 
     async def construct_ai_response(self, places, response_data):
-
         
-
         constructed_response = []
         for data in response_data:
 
@@ -212,9 +199,6 @@ class EuroTripAiConsumer(AsyncWebsocketConsumer):
                 "message": data.get("message", ""),
                 "photos": places[place_id_in_places_list].get("photos", []),
             })
-
-        print(f"\n\nConstructed AI response: {constructed_response}\n\n")
-
         return constructed_response
 
     async def send_message(self, event):

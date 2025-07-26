@@ -47,7 +47,6 @@ class Feed:
                 if detail:
                     place_details.append(detail)
 
-        print(f"\n\nFetched {len(place_details)} places based on interests: {extracted_search_interests_from_message}\n\n")
         return place_details
 
     def get_places_from_google_maps(self, city_name: str, city_location: tuple, user_interests: list, is_search_request=False):
@@ -97,7 +96,6 @@ class Feed:
         return user_feed
 
     def get_place_details(self, place_id: str, tag=None, is_ai_request=False, is_saved_place_request=False, city_name=None) -> dict:
-        print(f'getting place detail for {place_id}')
         try:
             request_place_details = requests.get(
                 f"{self.google_places_base_url}/places/{place_id}?fields=*&key={self.api_key}"
@@ -142,6 +140,4 @@ class Feed:
                 } for review in request_data["reviews"] if review.get("text") and review.get("rating")
             ]
             place_data["write_a_review_url"] = request_data.get("googleMapsLinks", {}).get("writeAReviewUri")
-
-        print(f'returning:\n\n{place_data}\n\n')
         return place_data
